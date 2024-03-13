@@ -15,9 +15,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class ServletActuator extends HttpServlet {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = -6201150158950823811L;
 
 	private List<Actuator> Actuators;

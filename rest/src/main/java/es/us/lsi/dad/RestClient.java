@@ -1,3 +1,4 @@
+/*
 package es.us.lsi.dad;
 
 import java.util.Calendar;
@@ -90,7 +91,7 @@ public class RestClient extends AbstractVerticle {
 		 * "mock/rest/2834f21dcd9cb6241c0c5eae0d2128f9/user", new UsuarioImpl(3,
 		 * "Nuevo", "Usuario", Calendar.getInstance().getTime(), "nuevo_usuario",
 		 * "pass"), PostResponse.class, resDelete);
-		 */
+		 *
 	}
 
 	public <T> void getRequest(Integer port, String host, String resource, Class<T> classType, Promise<T> promise) {
@@ -138,7 +139,6 @@ public class RestClient extends AbstractVerticle {
 				promise.fail(elem.cause());
 			}
 		});
-
 	}
 
 	public <B, T> void putRequest(Integer port, String host, String resource, B body, Class<T> classTypeRes,
@@ -168,7 +168,7 @@ public class RestClient extends AbstractVerticle {
 				promise.fail(elem.cause());
 			}
 		});
-
 	}
 
 }
+*/

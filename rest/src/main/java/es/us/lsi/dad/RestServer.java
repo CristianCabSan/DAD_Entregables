@@ -1,8 +1,10 @@
 package es.us.lsi.dad;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -19,7 +21,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 public class RestServer extends AbstractVerticle {
 
-	private Map<Integer, UserEntity> users = new HashMap<Integer, UserEntity>();
+	private List<Sensor> sensors = new ArrayList<Sensor>();
 	private Gson gson;
 
 	public void start(Promise<Void> startFuture) {
@@ -33,7 +35,10 @@ public class RestServer extends AbstractVerticle {
 		Router router = Router.router(vertx);
 
 		// Handling any server startup result
-		vertx.createHttpServer().requestHandler(router::handle).listen(8080, result -> {
+		vertx
+		.createHttpServer()
+		.requestHandler(router::handle)
+		.listen(8084, result -> {
 			if (result.succeeded()) {
 				startFuture.complete();
 			} else {
@@ -43,47 +48,67 @@ public class RestServer extends AbstractVerticle {
 
 		// Defining URI paths for each method in RESTful interface, including body
 		// handling by /api/users* or /api/users/*
-		router.route("/api/users*").handler(BodyHandler.create());
-		router.get("/api/users").handler(this::getAllWithParams);
+		router.route("/api/sensors*").handler(BodyHandler.create());
+		
+		router.get("/api/sensors").handler(this::getAllWithParams);
+		router.get("/api/sensors/all").handler(this::getAll);
+		/*
 		router.get("/api/users/:userid").handler(this::getOne);
 		router.post("/api/users").handler(this::addOne);
 		router.delete("/api/users/:userid").handler(this::deleteOne);
 		router.put("/api/users/:userid").handler(this::putOne);
+		*/
+	}
+
+	@Override
+	public void stop(Promise<Void> stopPromise) throws Exception {
+		try {
+			sensors.clear();
+			stopPromise.complete();
+		} catch (Exception e) {
+			stopPromise.fail(e);
+		}
+		super.stop(stopPromise);
 	}
 
 	@SuppressWarnings("unused")
 	private void getAll(RoutingContext routingContext) {
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new UserEntityListWrapper(users.values())));
+				.end(gson.toJson(new SensorListWrapper(sensors)));
 	}
 
 	private void getAllWithParams(RoutingContext routingContext) {
-		final String name = routingContext.queryParams().contains("name") ? routingContext.queryParam("name").get(0) : null;
-		final String surname = routingContext.queryParams().contains("surname") ? routingContext.queryParam("surname").get(0) : null;
-		final String username = routingContext.queryParams().contains("username") ? routingContext.queryParam("username").get(0) : null;
-		
+		final Integer ID = routingContext.queryParams().contains("ID") ? Integer.parseInt(routingContext.queryParam("ID").get(0))
+				: null;	
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new UserEntityListWrapper(users.values().stream().filter(elem -> {
+				.end(gson.toJson(new SensorListWrapper(sensors.stream().filter(elem -> {
 					boolean res = true;
-					res = res && name != null ? elem.getName().equals(name) : true;
-					res = res && surname != null ? elem.getSurname().equals(surname) : true;
-					res = res && username != null ? elem.getUsername().equals(username) : true;
+					res = res && (ID != null ? elem.getID().equals(ID) : true);
 					return res;
 				}).collect(Collectors.toList()))));
 	}
-
+	
+	/*
 	private void getOne(RoutingContext routingContext) {
-		int id = Integer.parseInt(routingContext.request().getParam("userid"));
-		if (users.containsKey(id)) {
-			UserEntity ds = users.get(id);
-			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-					.end(gson.toJson(ds));
-		} else {
+		int id = 0;
+		try {
+			id = Integer.parseInt(routingContext.request().getParam("userid"));
+
+			if (users.containsKey(id)) {
+				UserEntity ds = users.get(id);
+				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
+						.setStatusCode(200).end(ds != null ? gson.toJson(ds) : "");
+			} else {
+				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
+						.setStatusCode(204).end();
+			}
+		} catch (Exception e) {
 			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(204)
 					.end();
 		}
 	}
 
+	
 	private void addOne(RoutingContext routingContext) {
 		final UserEntity user = gson.fromJson(routingContext.getBodyAsString(), UserEntity.class);
 		users.put(user.getIdusers(), user);
@@ -117,7 +142,8 @@ public class RestServer extends AbstractVerticle {
 		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
 				.end(gson.toJson(element));
 	}
-
+	*/
+	
 	private void createSomeData(int number) {
 		Random rnd = new Random();
 		IntStream.range(0, number).forEach(elem -> {
