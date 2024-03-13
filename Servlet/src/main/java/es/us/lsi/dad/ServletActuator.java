@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
 import com.google.gson.Gson;
 
 import jakarta.servlet.ServletException;
@@ -18,19 +20,29 @@ public class ServletActuator extends HttpServlet {
 	 */
 	private static final long serialVersionUID = -6201150158950823811L;
 
-	private List<Integer> Actuators;
+	private List<Actuator> Actuators;
 
 	public void init() throws ServletException {
 		Actuators = new ArrayList<>();
-		Actuators.add(1);
+		Actuator prueba = new Actuator();
+		prueba.setID(1);
+		prueba.setBoardID(1);
+		prueba.setName("prueba");
+		prueba.setType("motor");
+		prueba.setActive(false);
+		Actuators.add(prueba);
 		super.init();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		Integer ID = Integer.parseInt(req.getParameter("ID"));
-		if (Actuators.contains(ID)) {
-			response(resp, "Actuator with ID:" + ID + " exists");
+		Gson gson = new Gson();
+		if (Actuators.stream().anyMatch(act -> act.getID() == ID)) {
+			Optional<Actuator> foundActuator = Actuators.stream()
+	                .filter(Actuator -> Actuator.getID() == ID)
+	                .findFirst();
+			resp.getWriter().println(gson.toJson(foundActuator));
 		} else {
 			response(resp, "Actuator with ID:" + ID + " doesnt exist");
 		}
@@ -42,14 +54,14 @@ public class ServletActuator extends HttpServlet {
 	    BufferedReader reader = req.getReader();
 	    
 	    Gson gson = new Gson();
-		Actuator actuator = gson.fromJson(reader, Actuator.class);
-		if (!Actuators.contains(actuator.getID())) {
-			Actuators.add(actuator.getID());
-			resp.getWriter().println(gson.toJson(actuator));
+		Actuator newActuator = gson.fromJson(reader, Actuator.class);
+		if (!Actuators.stream().anyMatch(act -> act.getID() == newActuator.getID())) {
+			Actuators.add(newActuator);
+			resp.getWriter().println(gson.toJson(newActuator));
 			resp.setStatus(201);
 		}else{
 			resp.setStatus(300);
-			response(resp, "ID is already assigned");
+			response(resp, "ID:" + newActuator.getID() + " is already assigned");
 		}
 	}
 	
@@ -59,14 +71,14 @@ public class ServletActuator extends HttpServlet {
 	    BufferedReader reader = req.getReader();
 	    
 	    Gson gson = new Gson();
-		Actuator actuator = gson.fromJson(reader, Actuator.class);
-		if (Actuators.contains(actuator.getID())) {
-			Actuators.remove(actuator.getID());
-			resp.getWriter().println(gson.toJson(actuator));
+		Actuator targetActuator = gson.fromJson(reader, Actuator.class);
+		if (Actuators.stream().anyMatch(Actuator -> Actuator.getID() == targetActuator.getID())) {
+			Actuators.removeIf(act -> act.getID() == targetActuator.getID());
+			resp.getWriter().println(gson.toJson(targetActuator));
 			resp.setStatus(201);
 		}else{
 			resp.setStatus(300);
-			response(resp, "Actuator with ID:" + actuator.getID() + " doesnt exist");
+			response(resp, "Actuator with ID:" + targetActuator.getID() + " doesnt exist");
 		}
 	   
 	}

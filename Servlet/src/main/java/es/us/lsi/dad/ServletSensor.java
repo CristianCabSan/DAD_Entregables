@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.gson.Gson;
 
@@ -14,26 +15,33 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class ServletSensor extends HttpServlet {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = -6201150158950823811L;
 
-	private List<Integer> Sensors;
+	private List<Sensor> Sensors;
 
 	public void init() throws ServletException {
 		Sensors = new ArrayList<>();
-		Sensors.add(1);
+		Sensor prueba = new Sensor();
+		prueba.setID(1);
+		prueba.setBoardID(1);
+		prueba.setName("prueba");
+		prueba.setType("motor");
+		prueba.setValue(30.);
+		Sensors.add(prueba);
 		super.init();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		Integer ID = Integer.parseInt(req.getParameter("ID"));
-		if (Sensors.contains(ID)) {
-			response(resp, "Sensor with ID:" + ID + " exists");
+		Integer targetSensorID = Integer.parseInt(req.getParameter("ID"));
+		Gson gson = new Gson();
+		if (Sensors.stream().anyMatch(sen -> sen.getID() == targetSensorID)) {
+			Optional<Sensor> targetSensor = Sensors.stream()
+	                .filter(Sensor -> Sensor.getID() == targetSensorID)
+	                .findFirst();
+			resp.getWriter().println(gson.toJson(targetSensor));
 		} else {
-			response(resp, "Sensor with ID:" + ID + " doesnt exist");
+			response(resp, "Sensor with ID:" + targetSensorID + " doesnt exist");
 		}
 	}
 	
@@ -43,14 +51,14 @@ public class ServletSensor extends HttpServlet {
 	    BufferedReader reader = req.getReader();
 	    
 	    Gson gson = new Gson();
-		Sensor sensor = gson.fromJson(reader, Sensor.class);
-		if (!Sensors.contains(sensor.getID())) {
-			Sensors.add(sensor.getID());
-			resp.getWriter().println(gson.toJson(sensor));
+		Sensor newSensor = gson.fromJson(reader, Sensor.class);
+		if (!Sensors.stream().anyMatch(sen -> sen.getID() == newSensor.getID())) {
+			Sensors.add(newSensor);
+			resp.getWriter().println(gson.toJson(newSensor));
 			resp.setStatus(201);
 		}else{
 			resp.setStatus(300);
-			response(resp, "ID is already assigned");
+			response(resp, "ID:" + newSensor.getID() + " is already assigned");
 		}
 	}
 	
@@ -60,14 +68,14 @@ public class ServletSensor extends HttpServlet {
 	    BufferedReader reader = req.getReader();
 	    
 	    Gson gson = new Gson();
-		Sensor sensor = gson.fromJson(reader, Sensor.class);
-		if (Sensors.contains(sensor.getID())) {
-			Sensors.remove(sensor.getID());
-			resp.getWriter().println(gson.toJson(sensor));
+		Sensor targetSensor = gson.fromJson(reader, Sensor.class);
+		if (Sensors.stream().anyMatch(Sensor -> Sensor.getID() == targetSensor.getID())) {
+			Sensors.removeIf(sen -> sen.getID() == targetSensor.getID());
+			resp.getWriter().println(gson.toJson(targetSensor));
 			resp.setStatus(201);
 		}else{
 			resp.setStatus(300);
-			response(resp, "Sensor with ID:" + sensor.getID() + " doesnt exist");
+			response(resp, "Sensor with ID:" + targetSensor.getID() + " doesnt exist");
 		}
 	   
 	}
