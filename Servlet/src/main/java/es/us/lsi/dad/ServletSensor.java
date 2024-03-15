@@ -24,7 +24,6 @@ public class ServletSensor extends HttpServlet {
 		Sensor prueba = new Sensor();
 		prueba.setID(1);
 		prueba.setBoardID(1);
-		prueba.setName("prueba");
 		prueba.setType("motor");
 		prueba.setValue(30.);
 		Sensors.add(prueba);

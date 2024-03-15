@@ -6,7 +6,6 @@ import java.util.Objects;
 public class Actuator {
 	
 	private Integer ID;
-	private String name;
 	private Integer boardID;
 	private Boolean active;
 	private String type;
@@ -22,14 +21,6 @@ public class Actuator {
 
 	public void setID(Integer iD) {
 		ID = iD;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 
 	public Integer getBoardID() {
@@ -66,7 +57,7 @@ public class Actuator {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(ID, active, boardID, date, name, type);
+		return Objects.hash(ID, active, boardID, date, type);
 	}
 
 	@Override
@@ -80,12 +71,12 @@ public class Actuator {
 		Actuator other = (Actuator) obj;
 		return Objects.equals(ID, other.ID) && Objects.equals(active, other.active)
 				&& Objects.equals(boardID, other.boardID) && Objects.equals(date, other.date)
-				&& Objects.equals(name, other.name) && Objects.equals(type, other.type);
+				&& Objects.equals(type, other.type);
 	}
 
 	@Override
 	public String toString() {
-		return "Actuator [ID=" + ID + ", name=" + name + ", boardID=" + boardID + ", active=" + active + ", type="
+		return "Actuator [ID=" + ID + ", boardID=" + boardID + ", active=" + active + ", type="
 				+ type + ", date=" + date + "]";
 	}
 }

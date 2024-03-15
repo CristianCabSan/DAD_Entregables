@@ -1,3 +1,4 @@
+/*
 package es.us.lsi.dad;
 
 import java.util.Calendar;
@@ -30,12 +31,12 @@ public class RestClientLocal extends AbstractVerticle {
 		WebClientOptions options = new WebClientOptions().setUserAgent("RestClientApp/2.0.2.1");
 		
 		// Optimization for servlet-based connection (state-less)
-		options.setKeepAlive(false);
-		client = WebClient.create(vertx, options);
-
+		//options.setKeepAlive(false);
+		//client = WebClient.create(vertx, options);
+		
 		/*
 		 * Get resource list operation
-		 */
+		 *
 		Promise<UserEntityListWrapper> resList = Promise.promise();
 		resList.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -60,7 +61,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Post resource operation
-		 */
+		 *
 		Promise<UserEntity> resPost = Promise.promise();
 		resPost.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -83,7 +84,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Get single resource operation
-		 */
+		 *
 		Promise<UserEntity> res = Promise.promise();
 		res.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -104,7 +105,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Put resource operation
-		 */
+		 *
 		Promise<UserEntity> resPut = Promise.promise();
 		resPut.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -126,7 +127,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Get resource operation using params
-		 */
+		 *
 		Promise<UserEntityListWrapper> resWithParams = Promise.promise();
 		resWithParams.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -148,7 +149,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Delete resource operation
-		 */
+		 *
 		Promise<UserEntity> resDelete = Promise.promise();
 		resDelete.future().onComplete(complete -> {
 			System.out.println("-----------------------------------------------------------");
@@ -169,7 +170,7 @@ public class RestClientLocal extends AbstractVerticle {
 
 		/*
 		 * Combining several promises
-		 */
+		 *
 		Promise<UserEntity> resPost2 = Promise.promise();
 		Promise<UserEntity> resPost3 = Promise.promise();
 		Promise<UserEntity> resPost4 = Promise.promise();
@@ -208,7 +209,7 @@ public class RestClientLocal extends AbstractVerticle {
 	 * @param resource  URI where resource is provided
 	 * @param classType Type of result enveloped in JSON response
 	 * @param promise   Promise to be executed on call finish
-	 */
+	 *
 	public <T> void getRequest(Integer port, String host, String resource, Class<T> classType, Promise<T> promise) {
 		client.getAbs(host + ":" + port + "/" + resource).send(elem -> {
 			if (elem.succeeded()) {
@@ -230,7 +231,7 @@ public class RestClientLocal extends AbstractVerticle {
 	 * @param classType Type of result enveloped in JSON response
 	 * @param promise   Promise to be executed on call finish
 	 * @param params    Map with key-value entries for call parameters
-	 */
+	 *
 	public <T> void getRequestWithParams(Integer port, String host, String resource, Class<T> classType,
 			Promise<T> promise, Map<String, String> params) {
 		HttpRequest<Buffer> httpRequest = client.getAbs(host + ":" + port + "/" + resource);
@@ -259,7 +260,7 @@ public class RestClientLocal extends AbstractVerticle {
 	 * @param resource  URI where resource is provided
 	 * @param classType Type of result enveloped in JSON response
 	 * @param promise   Promise to be executed on call finish
-	 */
+	 *
 	public <B, T> void postRequest(Integer port, String host, String resource, Object body, Class<T> classType,
 			Promise<T> promise) {
 		JsonObject jsonBody = new JsonObject(gson.toJson(body));
@@ -283,7 +284,7 @@ public class RestClientLocal extends AbstractVerticle {
 	 * @param resource  URI where resource is provided
 	 * @param classType Type of result enveloped in JSON response
 	 * @param promise   Promise to be executed on call finish
-	 */
+	 *
 	public <B, T> void putRequest(Integer port, String host, String resource, Object body, Class<T> classType,
 			Promise<T> promise) {
 		JsonObject jsonBody = new JsonObject(gson.toJson(body));
@@ -306,7 +307,7 @@ public class RestClientLocal extends AbstractVerticle {
 	 * @param resource  URI where resource is provided
 	 * @param classType Type of result enveloped in JSON response
 	 * @param promise   Promise to be executed on call finish
-	 */
+	 *
 	public <T> void deleteRequest(Integer port, String host, String resource, Class<T> classType, Promise<T> promise) {
 		client.deleteAbs(host + ":" + port + "/" + resource).send(elem -> {
 			if (elem.succeeded()) {
@@ -320,3 +321,4 @@ public class RestClientLocal extends AbstractVerticle {
 	}
 
 }
+*/

@@ -24,7 +24,6 @@ public class ServletActuator extends HttpServlet {
 		Actuator prueba = new Actuator();
 		prueba.setID(1);
 		prueba.setBoardID(1);
-		prueba.setName("prueba");
 		prueba.setType("motor");
 		prueba.setActive(false);
 		Actuators.add(prueba);

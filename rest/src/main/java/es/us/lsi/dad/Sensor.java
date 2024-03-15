@@ -6,7 +6,6 @@ import java.util.Objects;
 public class Sensor {
 	
 	private Integer ID;
-	private String name;
 	private Integer boardID;
 	private Double value;
 	private String type;
@@ -67,7 +66,7 @@ public class Sensor {
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(ID, boardID, date, name, type, value);
+		return Objects.hash(ID, boardID, date, type, value);
 	}
 
 	@Override
@@ -80,21 +79,13 @@ public class Sensor {
 			return false;
 		Sensor other = (Sensor) obj;
 		return Objects.equals(ID, other.ID) && Objects.equals(boardID, other.boardID)
-				&& Objects.equals(date, other.date) && Objects.equals(name, other.name)
+				&& Objects.equals(date, other.date)
 				&& Objects.equals(type, other.type) && Objects.equals(value, other.value);
 	}
 
 	@Override
 	public String toString() {
-		return "Sensor [ID=" + ID + ", name=" + name + ", boardID=" + boardID + ", value=" + value + ", type=" + type
+		return "Sensor [ID=" + ID + ", boardID=" + boardID + ", value=" + value + ", type=" + type
 				+ ", date=" + date + "]";
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
 	}
 }

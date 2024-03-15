@@ -1,11 +1,13 @@
 package es.us.lsi.dad;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -49,15 +51,12 @@ public class RestServer extends AbstractVerticle {
 		// Defining URI paths for each method in RESTful interface, including body
 		// handling by /api/users* or /api/users/*
 		router.route("/api/sensors*").handler(BodyHandler.create());
-		
 		router.get("/api/sensors").handler(this::getAllWithParams);
-		router.get("/api/sensors/all").handler(this::getAll);
-		/*
-		router.get("/api/users/:userid").handler(this::getOne);
-		router.post("/api/users").handler(this::addOne);
-		router.delete("/api/users/:userid").handler(this::deleteOne);
-		router.put("/api/users/:userid").handler(this::putOne);
-		*/
+		router.get("/api/sensors/sensor/all").handler(this::getAll);
+		router.get("/api/sensors/:sensorid").handler(this::getOne);
+		//router.post("/api/users").handler(this::addOne);
+		//router.delete("/api/users/:userid").handler(this::deleteOne);
+		//router.put("/api/users/:userid").handler(this::putOne);
 	}
 
 	@Override
@@ -88,16 +87,16 @@ public class RestServer extends AbstractVerticle {
 				}).collect(Collectors.toList()))));
 	}
 	
-	/*
 	private void getOne(RoutingContext routingContext) {
-		int id = 0;
 		try {
-			id = Integer.parseInt(routingContext.request().getParam("userid"));
+			int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 
-			if (users.containsKey(id)) {
-				UserEntity ds = users.get(id);
+			if (sensors.stream().anyMatch(sen -> sen.getID() == targetSensorID)) {
+				Optional<Sensor> targetSensor = sensors.stream()
+		                .filter(sen -> sen.getID() == targetSensorID)
+		                .findFirst();
 				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end(ds != null ? gson.toJson(ds) : "");
+						.setStatusCode(200).end(gson.toJson(targetSensor.get()));
 			} else {
 				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
 						.setStatusCode(204).end();
@@ -108,7 +107,7 @@ public class RestServer extends AbstractVerticle {
 		}
 	}
 
-	
+	/*
 	private void addOne(RoutingContext routingContext) {
 		final UserEntity user = gson.fromJson(routingContext.getBodyAsString(), UserEntity.class);
 		users.put(user.getIdusers(), user);
@@ -146,10 +145,10 @@ public class RestServer extends AbstractVerticle {
 	
 	private void createSomeData(int number) {
 		Random rnd = new Random();
+		sensors.add(new Sensor(1, 1, 0., "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
 		IntStream.range(0, number).forEach(elem -> {
 			int id = rnd.nextInt();
-			users.put(id, new UserEntity(id, "Nombre_" + id, "Apellido_" + id,
-					new Date(Calendar.getInstance().getTimeInMillis() + id), "Username_" + id, "Password_" + id));
+			sensors.add(new Sensor(id, 1, 0., "Type_" + id, new Timestamp(System.currentTimeMillis()+id)));
 		});
 	}
 
