@@ -79,7 +79,7 @@ public class Sensor {
 			return false;
 		Sensor other = (Sensor) obj;
 		return Objects.equals(ID, other.ID) && Objects.equals(boardID, other.boardID)
-				&& Objects.equals(date, other.date)
+				&& Objects.equals(date, other.date)	
 				&& Objects.equals(type, other.type) && Objects.equals(value, other.value);
 	}
 

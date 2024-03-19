@@ -54,9 +54,9 @@ public class RestServer extends AbstractVerticle {
 		router.get("/api/sensors").handler(this::getAllWithParams);
 		router.get("/api/sensors/sensor/all").handler(this::getAll);
 		router.get("/api/sensors/:sensorid").handler(this::getOne);
-		//router.post("/api/users").handler(this::addOne);
-		//router.delete("/api/users/:userid").handler(this::deleteOne);
-		//router.put("/api/users/:userid").handler(this::putOne);
+		router.post("/api/sensors").handler(this::addOne);
+		router.delete("/api/sensors/:sensorid").handler(this::deleteOne);
+		router.put("/api/sensors/:userid").handler(this::putOne);
 	}
 
 	@Override
@@ -99,7 +99,7 @@ public class RestServer extends AbstractVerticle {
 						.setStatusCode(200).end(gson.toJson(targetSensor.get()));
 			} else {
 				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(204).end();
+						.setStatusCode(200).end("Sensor with ID:" + targetSensorID + " doesnt exist");
 			}
 		} catch (Exception e) {
 			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(204)
@@ -107,45 +107,58 @@ public class RestServer extends AbstractVerticle {
 		}
 	}
 
-	/*
+	
 	private void addOne(RoutingContext routingContext) {
-		final UserEntity user = gson.fromJson(routingContext.getBodyAsString(), UserEntity.class);
-		users.put(user.getIdusers(), user);
+		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+		sensors.add(sensor.getID(), sensor);
 		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-				.end(gson.toJson(user));
+				.end(gson.toJson(sensor));
 	}
 
+	
 	private void deleteOne(RoutingContext routingContext) {
-		int id = Integer.parseInt(routingContext.request().getParam("userid"));
-		if (users.containsKey(id)) {
-			UserEntity user = users.get(id);
-			users.remove(id);
-			routingContext.response().setStatusCode(200).putHeader("content-type", "application/json; charset=utf-8")
-					.end(gson.toJson(user));
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+		if (sensors.stream().anyMatch(sen -> sen.getID() == targetSensorID)) {
+			Optional<Sensor> targetSensor = sensors.stream()
+	                .filter(Sensor -> Sensor.getID() == targetSensorID)
+	                .findFirst();
+			if (targetSensor.isPresent()) {
+		        sensors.removeIf(sen -> sen.getID() == targetSensorID);
+		        routingContext.response().setStatusCode(200).putHeader("content-type", "application/json; charset=utf-8")
+		                .end(gson.toJson(targetSensor.get()));
+			}
 		} else {
 			routingContext.response().setStatusCode(204).putHeader("content-type", "application/json; charset=utf-8")
-					.end();
+					.end("Sensor with ID:" + targetSensorID + " doesnt exist");
 		}
 	}
 
+	
 	private void putOne(RoutingContext routingContext) {
-		int id = Integer.parseInt(routingContext.request().getParam("userid"));
-		UserEntity ds = users.get(id);
-		final UserEntity element = gson.fromJson(routingContext.getBodyAsString(), UserEntity.class);
-		ds.setName(element.getName());
-		ds.setSurname(element.getSurname());
-		ds.setBirthdate(element.getBirthdate());
-		ds.setPassword(element.getPassword());
-		ds.setUsername(element.getUsername());
-		users.put(ds.getIdusers(), ds);
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+		Optional<Sensor> ts = sensors.stream()
+                .filter(Sensor -> Sensor.getID() == targetSensorID)
+                .findFirst();
+		final Sensor element = gson.fromJson(routingContext.getBodyAsString(), Sensor.class); //Sensor a añadir
+		if (ts.isPresent()){
+			Sensor targetSensor = ts.get();
+			
+			targetSensor.setID(element.getID());
+			targetSensor.setBoardID(element.getBoardID());
+			targetSensor.setValue(element.getValue());
+			targetSensor.setType(element.getType());
+			targetSensor.setDate(element.getDate());
+			
+		}
 		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-				.end(gson.toJson(element));
+		.end(gson.toJson(element));
 	}
-	*/
+	
 	
 	private void createSomeData(int number) {
 		Random rnd = new Random();
 		sensors.add(new Sensor(1, 1, 0., "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
+		sensors.add(new Sensor(1, 2, 0., "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
 		IntStream.range(0, number).forEach(elem -> {
 			int id = rnd.nextInt();
 			sensors.add(new Sensor(id, 1, 0., "Type_" + id, new Timestamp(System.currentTimeMillis()+id)));
