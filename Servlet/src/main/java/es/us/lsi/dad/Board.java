@@ -10,6 +10,14 @@ public class Board {
 	private List<Integer> assignedActuators;
 	private Timestamp date;
 	
+	public Board(Integer iD, List<Integer> assignedSensors, List<Integer> assignedActuators, Timestamp date) {
+		super();
+		ID = iD;
+		this.assignedSensors = assignedSensors;
+		this.assignedActuators = assignedActuators;
+		this.date = date;
+	}
+
 	public Integer getID() {
 		return ID;
 	}
