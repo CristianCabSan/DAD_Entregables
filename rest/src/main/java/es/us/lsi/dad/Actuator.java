@@ -11,6 +11,16 @@ public class Actuator {
 	private String type;
 	private Timestamp date;
 	
+	public Actuator(Integer ID, Integer boardID, Boolean active, String type, Timestamp date) {
+		super();
+		this.setID(ID);
+		this.setBoardID(boardID);
+		this.setActive(active);
+		this.setType(type);
+		this.setDate(date);
+	}
+
+	
 	public Actuator() {
 		super();
 	}
