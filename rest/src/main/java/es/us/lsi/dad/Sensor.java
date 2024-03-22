@@ -9,13 +9,13 @@ public class Sensor {
 	private Integer boardID;
 	private Double value;
 	private String type;
-	private Timestamp date;
+	private Long date;
 	
 	public Sensor() {
 		super();
 	}
-
-	public Sensor(Integer ID, Integer boardID, Double value, String type, Timestamp date) {
+	
+	public Sensor(Integer ID, Integer boardID, Double value, String type, Long date) {
 		super();
 		this.setID(ID);
 		this.setBoardID(boardID);
@@ -24,11 +24,11 @@ public class Sensor {
 		this.setDate(date);
 	}
 
-	public Timestamp getDate() {
+	public Long getDate() {
 		return date;
 	}
 
-	public void setDate(Timestamp date) {
+	public void setDate(Long date) {
 		this.date = date;
 	}
 

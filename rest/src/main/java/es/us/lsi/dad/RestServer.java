@@ -12,26 +12,47 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.mysqlclient.MySQLClient;
+import io.vertx.mysqlclient.MySQLConnectOptions;
+import io.vertx.mysqlclient.MySQLPool;
+import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
+
+
 
 public class RestServer extends AbstractVerticle {
-
 	private List<Sensor> sensors = new ArrayList<Sensor>();
 	private List<Actuator> actuators = new ArrayList<Actuator>();
 	private List<Board> boards = new ArrayList<Board>();
 	private Gson gson;
+	MySQLPool mySqlClient;
 
 	public void start(Promise<Void> startFuture) {
 		// Creating some synthetic data
 		createSomeData(25);
+		MySQLConnectOptions connectOptions = new MySQLConnectOptions()
+				.setPort(3306)
+				.setHost("localhost")
+				.setDatabase("dad")
+				.setUser("usuario")
+				.setPassword("usuario");
 		
+		PoolOptions poolOptions = new PoolOptions().setMaxSize(5);
+		
+		mySqlClient = MySQLPool.pool(vertx, connectOptions, poolOptions);
 
 		// Instantiating a Gson serialize object using specific date format
 		gson = new GsonBuilder().setDateFormat("yyyy-MM-dd").create();
@@ -92,10 +113,32 @@ public class RestServer extends AbstractVerticle {
 
 	@SuppressWarnings("unused")
 	private void getAllSen(RoutingContext routingContext) {
+		mySqlClient.query("SELECT * FROM dad.sensors;").execute(res -> {
+			if(res.succeeded()) {
+				RowSet<Row> resultSet = res.result();
+				System.out.println(resultSet.size());
+				JsonArray result = new JsonArray();
+				for(Row elem : resultSet) {
+					result.add(new Sensor(
+							elem.getInteger("ID"),
+							elem.getInteger("boardID"), 
+							elem.getDouble("value"), 
+							elem.getString("type"), 
+							elem.getLong("date"))
+							);
+				}
+				System.out.println("sdf");
+			} else {
+				System.out.println("Error" + res.cause().getLocalizedMessage());
+			}
+		});
+	}
+	/*
+	private void getAllSen(RoutingContext routingContext) {
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
 				.end(gson.toJson(new SensorListWrapper(sensors)));
 	}
-	
+	*/
 	private void getAllAct(RoutingContext routingContext) {
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
 				.end(gson.toJson(new ActuatorListWrapper(actuators)));
@@ -331,10 +374,10 @@ public class RestServer extends AbstractVerticle {
 	
 	private void createSomeData(int number) {
 		Random rnd = new Random();
-		sensors.add(new Sensor(1, 1, 0., "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
+		sensors.add(new Sensor(1, 1, 0., "Type_" + 1, Calendar.getInstance().getTimeInMillis()));
 		IntStream.range(0, number).forEach(elem -> {
 			int id = rnd.nextInt();
-			sensors.add(new Sensor(id, 1, 0., "Type_" + id, new Timestamp(System.currentTimeMillis()+id)));
+			sensors.add(new Sensor(id, 1, 0., "Type_" + id, Calendar.getInstance().getTimeInMillis()));
 		});
 		
 		actuators.add(new Actuator(1, 1, true, "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
