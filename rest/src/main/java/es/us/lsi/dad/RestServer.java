@@ -30,6 +30,7 @@ import io.vertx.mysqlclient.MySQLPool;
 import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.Tuple;
 
 
 
@@ -75,12 +76,13 @@ public class RestServer extends AbstractVerticle {
 		// Defining URI paths for each method in RESTful interface, including body
 		// handling by /api/users* or /api/users/*
 		router.route("/api/sensors*").handler(BodyHandler.create());
-		router.get("/api/sensors").handler(this::getAllWithParamsSen);
+		router.get("/api/sensors/:boardid").handler(this::getAllSenFromBoard);
 		router.get("/api/sensors/sensor/all").handler(this::getAllSen);
-		router.get("/api/sensors/:sensorid").handler(this::getOneSen);
+		router.get("/api/sensors/:boardid/:sensorid").handler(this::getOneSen);
 		router.post("/api/sensors").handler(this::addOneSen);
-		router.delete("/api/sensors/:sensorid").handler(this::deleteOneSen);
-		router.put("/api/sensors/:userid").handler(this::putOneSen);
+		router.delete("/api/sensors/:boardid/:sensorid").handler(this::deleteOneSen);
+		router.put("/api/sensors/:boardid/:sensorid").handler(this::putOneSen);
+		
 		
 		router.route("/api/actuators*").handler(BodyHandler.create());
 		router.get("/api/actuators").handler(this::getAllWithParamsAct);
@@ -89,7 +91,7 @@ public class RestServer extends AbstractVerticle {
 		router.post("/api/actuators").handler(this::addOneAct);
 		router.delete("/api/actuators/:actuatorid").handler(this::deleteOneAct);
 		router.put("/api/actuators/:actuatorid").handler(this::putOneAct);
-		
+
 		router.route("/api/boards*").handler(BodyHandler.create());
 		router.get("/api/boards").handler(this::getAllWithParamsBoa);
 		router.get("/api/boards/board/all").handler(this::getAllBoa);
@@ -99,7 +101,7 @@ public class RestServer extends AbstractVerticle {
 		router.put("/api/boards/:boardid").handler(this::putOneBoa);
 		
 	}
-
+	@SuppressWarnings("unused")
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
 		try {
@@ -110,14 +112,14 @@ public class RestServer extends AbstractVerticle {
 		}
 		super.stop(stopPromise);
 	}
-
-	@SuppressWarnings("unused")
+	
+	
+	//Gets every sensor
 	private void getAllSen(RoutingContext routingContext) {
 		mySqlClient.query("SELECT * FROM dad.sensors;").execute(res -> {
 			if(res.succeeded()) {
 				RowSet<Row> resultSet = res.result();
-				System.out.println(resultSet.size());
-				JsonArray result = new JsonArray();
+				List<Sensor> result = new ArrayList<>();
 				for(Row elem : resultSet) {
 					result.add(new Sensor(
 							elem.getInteger("ID"),
@@ -127,39 +129,146 @@ public class RestServer extends AbstractVerticle {
 							elem.getLong("date"))
 							);
 				}
-				System.out.println("sdf");
+				routingContext.request().response().end(gson.toJson(result));
 			} else {
 				System.out.println("Error" + res.cause().getLocalizedMessage());
+				routingContext.request().response().setStatusCode(400).end();
 			}
 		});
 	}
-	/*
-	private void getAllSen(RoutingContext routingContext) {
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new SensorListWrapper(sensors)));
+	
+	//Gets all the values over time of a certain sensor (both id and boardID must be specified)
+	private void getOneSen(RoutingContext routingContext) {
+	    int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            RowSet<Row> resultSet = res.result();
+	                            JsonArray result = new JsonArray();
+	                            for (Row elem : resultSet) {
+	                                result.add(JsonObject.mapFrom(new Sensor(
+	                                        elem.getInteger("ID"),
+	                                        elem.getInteger("boardID"),
+	                                        elem.getDouble("value"),
+	                                        elem.getString("type"),
+	                                        elem.getLong("date"))));
+	                            }
+	                            routingContext.request().response().end(result.encode());
+	                        } else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
 	}
-	*/
+	
+	private void getAllSenFromBoard(RoutingContext routingContext) {
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ?")
+	                    .execute(Tuple.of(targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            RowSet<Row> resultSet = res.result();
+	                            JsonArray result = new JsonArray();
+	                            for (Row elem : resultSet) {
+	                                result.add(JsonObject.mapFrom(new Sensor(
+	                                        elem.getInteger("ID"),
+	                                        elem.getInteger("boardID"),
+	                                        elem.getDouble("value"),
+	                                        elem.getString("type"),
+	                                        elem.getLong("date"))));
+	                            }
+	                            routingContext.request().response().end(result.encode());
+	                        } else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	
+	private void addOneSen(RoutingContext routingContext) {
+		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+		mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("INSERT INTO sensors (id, boardID, value, type, date) VALUES (?, ?, ?, ?, ?)")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to insert data into the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
+	}
+	
+	private void deleteOneSen(RoutingContext routingContext) {
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("DELETE FROM sensors WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to delete data from the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
+	}
+	
+	private void putOneSen(RoutingContext routingContext) {
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+	    
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("UPDATE sensors SET boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate(), 
+	                    		targetSensorID, targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to update data in the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
+	}
+	
 	private void getAllAct(RoutingContext routingContext) {
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
 				.end(gson.toJson(new ActuatorListWrapper(actuators)));
 	}
-	
+
 	private void getAllBoa(RoutingContext routingContext) {
 		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
 				.end(gson.toJson(new BoardListWrapper(boards)));
 	}
 
-	private void getAllWithParamsSen(RoutingContext routingContext) {
-		final Integer ID = routingContext.queryParams().contains("ID") ? Integer.parseInt(routingContext.queryParam("ID").get(0))
-				: null;	
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new SensorListWrapper(sensors.stream().filter(elem -> {
-					boolean res = true;
-					res = res && (ID != null ? elem.getID().equals(ID) : true);
-					return res;
-				}).collect(Collectors.toList()))));
-	}
-	
 	private void getAllWithParamsAct(RoutingContext routingContext) {
 		final Integer ID = routingContext.queryParams().contains("ID") ? Integer.parseInt(routingContext.queryParam("ID").get(0))
 				: null;	
@@ -180,26 +289,6 @@ public class RestServer extends AbstractVerticle {
 					res = res && (ID != null ? elem.getID().equals(ID) : true);
 					return res;
 				}).collect(Collectors.toList()))));
-	}
-	
-	private void getOneSen(RoutingContext routingContext) {
-		try {
-			int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
-
-			if (sensors.stream().anyMatch(sen -> sen.getID() == targetSensorID)) {
-				Optional<Sensor> targetSensor = sensors.stream()
-		                .filter(sen -> sen.getID() == targetSensorID)
-		                .findFirst();
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end(gson.toJson(targetSensor.get()));
-			} else {
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end("Sensor with ID:" + targetSensorID + " doesnt exist");
-			}
-		} catch (Exception e) {
-			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(204)
-					.end();
-		}
 	}
 	
 	private void getOneAct(RoutingContext routingContext) {
@@ -242,12 +331,7 @@ public class RestServer extends AbstractVerticle {
 		}
 	}
 	
-	private void addOneSen(RoutingContext routingContext) {
-		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
-		sensors.add(sensor.getID(), sensor);
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-				.end(gson.toJson(sensor));
-	}
+	
 	
 	private void addOneAct(RoutingContext routingContext) {
 		final Actuator actuator = gson.fromJson(routingContext.getBodyAsString(), Actuator.class);
@@ -256,6 +340,28 @@ public class RestServer extends AbstractVerticle {
 				.end(gson.toJson(actuator));
 	}
 
+	private void putOneAct(RoutingContext routingContext) {
+		int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+		Optional<Actuator> ts = actuators.stream()
+                .filter(Actuator -> Actuator.getID() == targetActuatorID)
+                .findFirst();
+		final Actuator element = gson.fromJson(routingContext.getBodyAsString(), Actuator.class); //Actuator a añadir
+		if (ts.isPresent()){
+			Actuator targetActuator = ts.get();
+			
+			targetActuator.setID(element.getID());
+			targetActuator.setBoardID(element.getBoardID());
+			targetActuator.setActive(element.getActive());
+			targetActuator.setType(element.getType());
+			targetActuator.setDate(element.getDate());
+			
+		}
+		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
+		.end(gson.toJson(element));
+	}
+	
+	
+	
 	private void addOneBoa(RoutingContext routingContext) {
 		final Board board = gson.fromJson(routingContext.getBodyAsString(), Board.class);
 		boards.add(board.getID(), board);
@@ -263,22 +369,7 @@ public class RestServer extends AbstractVerticle {
 				.end(gson.toJson(board));
 	}
 	
-	private void deleteOneSen(RoutingContext routingContext) {
-		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
-		if (sensors.stream().anyMatch(sen -> sen.getID() == targetSensorID)) {
-			Optional<Sensor> targetSensor = sensors.stream()
-	                .filter(Sensor -> Sensor.getID() == targetSensorID)
-	                .findFirst();
-			if (targetSensor.isPresent()) {
-		        sensors.removeIf(sen -> sen.getID() == targetSensorID);
-		        routingContext.response().setStatusCode(200).putHeader("content-type", "application/json; charset=utf-8")
-		                .end(gson.toJson(targetSensor.get()));
-			}
-		} else {
-			routingContext.response().setStatusCode(204).putHeader("content-type", "application/json; charset=utf-8")
-					.end("Sensor with ID:" + targetSensorID + " doesnt exist");
-		}
-	}
+	
 	
 	private void deleteOneAct(RoutingContext routingContext) {
 		int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
@@ -314,45 +405,8 @@ public class RestServer extends AbstractVerticle {
 		}
 	}
 
-	private void putOneSen(RoutingContext routingContext) {
-		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
-		Optional<Sensor> ts = sensors.stream()
-                .filter(Sensor -> Sensor.getID() == targetSensorID)
-                .findFirst();
-		final Sensor element = gson.fromJson(routingContext.getBodyAsString(), Sensor.class); //Sensor a añadir
-		if (ts.isPresent()){
-			Sensor targetSensor = ts.get();
-			
-			targetSensor.setID(element.getID());
-			targetSensor.setBoardID(element.getBoardID());
-			targetSensor.setValue(element.getValue());
-			targetSensor.setType(element.getType());
-			targetSensor.setDate(element.getDate());
-			
-		}
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-		.end(gson.toJson(element));
-	}
 	
-	private void putOneAct(RoutingContext routingContext) {
-		int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
-		Optional<Actuator> ts = actuators.stream()
-                .filter(Actuator -> Actuator.getID() == targetActuatorID)
-                .findFirst();
-		final Actuator element = gson.fromJson(routingContext.getBodyAsString(), Actuator.class); //Actuator a añadir
-		if (ts.isPresent()){
-			Actuator targetActuator = ts.get();
-			
-			targetActuator.setID(element.getID());
-			targetActuator.setBoardID(element.getBoardID());
-			targetActuator.setActive(element.getActive());
-			targetActuator.setType(element.getType());
-			targetActuator.setDate(element.getDate());
-			
-		}
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-		.end(gson.toJson(element));
-	}
+	
 	
 	private void putOneBoa(RoutingContext routingContext) {
 		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));

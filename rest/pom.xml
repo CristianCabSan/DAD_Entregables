@@ -15,25 +15,25 @@
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-core</artifactId>
-			<version>4.0.3</version>
+			<version>4.4.6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-web</artifactId>
-			<version>4.0.3</version>
+			<version>4.4.6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-web-client</artifactId>
-			<version>4.0.3</version>
+			<version>4.4.6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-mysql-client</artifactId>
-			<version>4.0.3</version>
+			<version>4.4.6</version>
 		</dependency>
 		
 		<dependency>
@@ -42,5 +42,10 @@
           <version>4.1.63.Final</version>
           <classifier>osx-x86_64</classifier>
         </dependency>
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-databind</artifactId>
+		    <version>2.13.0</version> <!-- or the latest version -->
+		</dependency>
 	</dependencies>
 </project>
