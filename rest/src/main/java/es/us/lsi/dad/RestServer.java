@@ -2,6 +2,7 @@ package es.us.lsi.dad;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -35,15 +36,11 @@ import io.vertx.sqlclient.Tuple;
 
 
 public class RestServer extends AbstractVerticle {
-	private List<Sensor> sensors = new ArrayList<Sensor>();
-	private List<Actuator> actuators = new ArrayList<Actuator>();
-	private List<Board> boards = new ArrayList<Board>();
 	private Gson gson;
 	MySQLPool mySqlClient;
 
 	public void start(Promise<Void> startFuture) {
 		// Creating some synthetic data
-		createSomeData(25);
 		MySQLConnectOptions connectOptions = new MySQLConnectOptions()
 				.setPort(3306)
 				.setHost("localhost")
@@ -76,36 +73,38 @@ public class RestServer extends AbstractVerticle {
 		// Defining URI paths for each method in RESTful interface, including body
 		// handling by /api/users* or /api/users/*
 		router.route("/api/sensors*").handler(BodyHandler.create());
-		router.get("/api/sensors/:boardid").handler(this::getAllSenFromBoard);
 		router.get("/api/sensors/sensor/all").handler(this::getAllSen);
+		router.get("/api/sensors/:boardid").handler(this::getAllSenFromBoard);
 		router.get("/api/sensors/:boardid/:sensorid").handler(this::getOneSen);
+		router.get("/api/sensors/:boardid/:sensorid/:numberofvalues").handler(this::getLastNValuesFromSen);
 		router.post("/api/sensors").handler(this::addOneSen);
 		router.delete("/api/sensors/:boardid/:sensorid").handler(this::deleteOneSen);
 		router.put("/api/sensors/:boardid/:sensorid").handler(this::putOneSen);
 		
 		
 		router.route("/api/actuators*").handler(BodyHandler.create());
-		router.get("/api/actuators").handler(this::getAllWithParamsAct);
 		router.get("/api/actuators/actuator/all").handler(this::getAllAct);
-		router.get("/api/actuators/:actuatorid").handler(this::getOneAct);
+		router.get("/api/actuators/:boardid").handler(this::getAllActFromBoard);
+		router.get("/api/actuators/:boardid/:actuatorid").handler(this::getOneAct);
+		router.get("/api/actuators/:boardid/:actuatorid/:numberofvalues").handler(this::getLastNValuesFromAct);
 		router.post("/api/actuators").handler(this::addOneAct);
 		router.delete("/api/actuators/:actuatorid").handler(this::deleteOneAct);
-		router.put("/api/actuators/:actuatorid").handler(this::putOneAct);
-
+		router.put("/api/actuators/:boardid/:actuatorid").handler(this::putOneAct);
+		
 		router.route("/api/boards*").handler(BodyHandler.create());
-		router.get("/api/boards").handler(this::getAllWithParamsBoa);
 		router.get("/api/boards/board/all").handler(this::getAllBoa);
-		router.get("/api/boards/:boardid").handler(this::getOneBoa);
+		router.get("/api/boards/sensors/:boardid/:numberofvalues").handler(this::getLastNSenValuesFromBoa);
+		router.get("/api/boards/actuators/:boardid/:numberofvalues").handler(this::getLastNActValuesFromBoa);
 		router.post("/api/boards").handler(this::addOneBoa);
 		router.delete("/api/boards/:boardid").handler(this::deleteOneBoa);
 		router.put("/api/boards/:boardid").handler(this::putOneBoa);
+		//router.get("/api/boards/:boardid").handler(this::getOneBoa);
 		
 	}
 	@SuppressWarnings("unused")
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
 		try {
-			sensors.clear();
 			stopPromise.complete();
 		} catch (Exception e) {
 			stopPromise.fail(e);
@@ -114,7 +113,7 @@ public class RestServer extends AbstractVerticle {
 	}
 	
 	
-	//Gets every sensor
+	//Gets all values from every value
 	private void getAllSen(RoutingContext routingContext) {
 		mySqlClient.query("SELECT * FROM dad.sensors;").execute(res -> {
 			if(res.succeeded()) {
@@ -137,7 +136,7 @@ public class RestServer extends AbstractVerticle {
 		});
 	}
 	
-	//Gets all the values over time of a certain sensor (both id and boardID must be specified)
+	//Gets all the values over time of a certain sensor (both sensorid and boardid must be specified)
 	private void getOneSen(RoutingContext routingContext) {
 	    int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
@@ -145,19 +144,20 @@ public class RestServer extends AbstractVerticle {
 	        if (connection.succeeded()) {
 	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ?")
 	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
-	                        if (res.succeeded()) {
-	                            RowSet<Row> resultSet = res.result();
-	                            JsonArray result = new JsonArray();
-	                            for (Row elem : resultSet) {
-	                                result.add(JsonObject.mapFrom(new Sensor(
-	                                        elem.getInteger("ID"),
-	                                        elem.getInteger("boardID"),
-	                                        elem.getDouble("value"),
-	                                        elem.getString("type"),
-	                                        elem.getLong("date"))));
-	                            }
-	                            routingContext.request().response().end(result.encode());
-	                        } else {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Sensor> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Sensor(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
 	                            routingContext.request().response().setStatusCode(400).end();
 	                        }
 	                        connection.result().close();
@@ -168,25 +168,61 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	//Gets the last(higher date) N values from a certain sensor (both sensorid and boardid must be specified)
+	private void getLastNValuesFromSen(RoutingContext routingContext) {
+	    int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Sensor> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Sensor(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	
+	//Gets all the sensor values from a certain board
 	private void getAllSenFromBoard(RoutingContext routingContext) {
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
 	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ?")
 	                    .execute(Tuple.of(targetBoardID), res -> {
-	                        if (res.succeeded()) {
-	                            RowSet<Row> resultSet = res.result();
-	                            JsonArray result = new JsonArray();
-	                            for (Row elem : resultSet) {
-	                                result.add(JsonObject.mapFrom(new Sensor(
-	                                        elem.getInteger("ID"),
-	                                        elem.getInteger("boardID"),
-	                                        elem.getDouble("value"),
-	                                        elem.getString("type"),
-	                                        elem.getLong("date"))));
-	                            }
-	                            routingContext.request().response().end(result.encode());
-	                        } else {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Sensor> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Sensor(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
 	                            routingContext.request().response().setStatusCode(400).end();
 	                        }
 	                        connection.result().close();
@@ -197,6 +233,7 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	//Creates a new instance of sensor value
 	private void addOneSen(RoutingContext routingContext) {
 		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
 		mySqlClient.getConnection(connection -> {
@@ -216,6 +253,7 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	//Deletes a instace of sensor value
 	private void deleteOneSen(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
@@ -236,6 +274,7 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	//Updates a instace of sensor value
 	private void putOneSen(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
@@ -243,8 +282,8 @@ public class RestServer extends AbstractVerticle {
 	    
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("UPDATE sensors SET boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
-	                    .execute(Tuple.of(sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate(), 
+	            connection.result().preparedQuery("UPDATE sensors SET ID = ?, boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate(), 
 	                    		targetSensorID, targetBoardID), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
@@ -259,194 +298,368 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	/*--------------------------------------------------------------------------------*/
+	//For reference see sensors endpoints//
+	
 	private void getAllAct(RoutingContext routingContext) {
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new ActuatorListWrapper(actuators)));
-	}
-
-	private void getAllBoa(RoutingContext routingContext) {
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new BoardListWrapper(boards)));
-	}
-
-	private void getAllWithParamsAct(RoutingContext routingContext) {
-		final Integer ID = routingContext.queryParams().contains("ID") ? Integer.parseInt(routingContext.queryParam("ID").get(0))
-				: null;	
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new ActuatorListWrapper(actuators.stream().filter(elem -> {
-					boolean res = true;
-					res = res && (ID != null ? elem.getID().equals(ID) : true);
-					return res;
-				}).collect(Collectors.toList()))));
+		mySqlClient.query("SELECT * FROM dad.actuators;").execute(res -> {
+			if(res.succeeded()) {
+				RowSet<Row> resultSet = res.result();
+				List<Actuator> result = new ArrayList<>();
+				for(Row elem : resultSet) {
+					result.add(new Actuator(
+							elem.getInteger("ID"),
+							elem.getInteger("boardID"), 
+							elem.getDouble("value"), 
+							elem.getString("type"), 
+							elem.getLong("date"))
+							);
+				}
+				routingContext.request().response().end(gson.toJson(result));
+			} else {
+				System.out.println("Error" + res.cause().getLocalizedMessage());
+				routingContext.request().response().setStatusCode(400).end();
+			}
+		});
 	}
 	
-	private void getAllWithParamsBoa(RoutingContext routingContext) {
-		final Integer ID = routingContext.queryParams().contains("ID") ? Integer.parseInt(routingContext.queryParam("ID").get(0))
-				: null;	
-		routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(200)
-				.end(gson.toJson(new BoardListWrapper(boards.stream().filter(elem -> {
-					boolean res = true;
-					res = res && (ID != null ? elem.getID().equals(ID) : true);
-					return res;
-				}).collect(Collectors.toList()))));
+	private void getLastNValuesFromAct(RoutingContext routingContext) {
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Actuator> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Actuator(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
 	}
 	
 	private void getOneAct(RoutingContext routingContext) {
-		try {
-			int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
-
-			if (actuators.stream().anyMatch(sen -> sen.getID() == targetActuatorID)) {
-				Optional<Actuator> targetActuator= actuators.stream()
-		                .filter(sen -> sen.getID() == targetActuatorID)
-		                .findFirst();
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end(gson.toJson(targetActuator.get()));
-			} else {
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end("Actuator with ID:" + targetActuatorID + " doesnt exist");
-			}
-		} catch (Exception e) {
-			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(204)
-					.end();
-		}
-	}
-
-	private void getOneBoa(RoutingContext routingContext) {
-		try {
-			int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-
-			if (boards.stream().anyMatch(sen -> sen.getID() == targetBoardID)) {
-				Optional<Board> targetBoard = boards.stream()
-		                .filter(sen -> sen.getID() == targetBoardID)
-		                .findFirst();
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end(gson.toJson(targetBoard.get()));
-			} else {
-				routingContext.response().putHeader("content-type", "application/json; charset=utf-8")
-						.setStatusCode(200).end("Board with ID:" + targetBoardID + " doesnt exist");
-			}
-		} catch (Exception e) {
-			routingContext.response().putHeader("content-type", "application/json; charset=utf-8").setStatusCode(204)
-					.end();
-		}
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Actuator> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Actuator(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
 	}
 	
-	
+	private void getAllActFromBoard(RoutingContext routingContext) {
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ?")
+	                    .execute(Tuple.of(targetBoardID), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Actuator> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Actuator(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
 	
 	private void addOneAct(RoutingContext routingContext) {
-		final Actuator actuator = gson.fromJson(routingContext.getBodyAsString(), Actuator.class);
-		actuators.add(actuator.getID(), actuator);
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-				.end(gson.toJson(actuator));
+		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+		mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("INSERT INTO actuators (id, boardID, value, type, date) VALUES (?, ?, ?, ?, ?)")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to insert data into the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
 	}
-
+	
+	private void deleteOneAct(RoutingContext routingContext) {
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("DELETE FROM actuators WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to delete data from the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
+	}
+	
 	private void putOneAct(RoutingContext routingContext) {
-		int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
-		Optional<Actuator> ts = actuators.stream()
-                .filter(Actuator -> Actuator.getID() == targetActuatorID)
-                .findFirst();
-		final Actuator element = gson.fromJson(routingContext.getBodyAsString(), Actuator.class); //Actuator a añadir
-		if (ts.isPresent()){
-			Actuator targetActuator = ts.get();
-			
-			targetActuator.setID(element.getID());
-			targetActuator.setBoardID(element.getBoardID());
-			targetActuator.setActive(element.getActive());
-			targetActuator.setType(element.getType());
-			targetActuator.setDate(element.getDate());
-			
-		}
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-		.end(gson.toJson(element));
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorsid"));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    Actuator actuator = gson.fromJson(routingContext.getBodyAsString(), Actuator.class);
+	    
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("UPDATE actuators SET ID = ?, boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(actuator.getID(), actuator.getBoardID(), actuator.getValue(), actuator.getType(), actuator.getDate(), 
+	                    		targetSensorID, targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to update data in the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
 	}
 	
+	/*--------------------------------------------------------------------------------*/
 	
+	/*
+	private Integer ID;
+	private List<Integer> assignedSensors;
+	private List<Integer> assignedActuators;
+	private Timestamp date;
+	*/
+	
+	private void getAllBoa(RoutingContext routingContext) {
+		mySqlClient.query("SELECT * FROM dad.boards;").execute(res -> {
+			if(res.succeeded()) {
+				RowSet<Row> resultSet = res.result();
+				List<Board> result = new ArrayList<>();
+				for(Row elem : resultSet) {
+					result.add(new Board(
+							elem.getInteger("ID"),
+							elem.getLong("date")
+							));
+				}
+				routingContext.request().response().end(gson.toJson(result));
+			} else {
+				System.out.println("Error" + res.cause().getLocalizedMessage());
+				routingContext.request().response().setStatusCode(400).end();
+			}
+		});
+	}
+	
+	private void getLastNSenValuesFromBoa(RoutingContext routingContext) {
+		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetBoardID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Sensor> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Sensor(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result) + "hola");
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	
+	private void getLastNActValuesFromBoa(RoutingContext routingContext) {
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetBoardID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Actuator> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Actuator(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result) + "hola");
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	
+	/*
+	private void getOneBoa(RoutingContext routingContext) {
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ?")
+	                    .execute(Tuple.of(targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            RowSet<Row> resultSet = res.result();
+	                            JsonArray result = new JsonArray();
+	                            for(Row elem : resultSet) {
+	            					result.add(new Board(
+	            							elem.getInteger("ID"),
+	            							elem.getLong("date")
+	            							));
+	            				}
+	                            routingContext.request().response().end(result.encode());
+	                        } else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	*/
 	
 	private void addOneBoa(RoutingContext routingContext) {
 		final Board board = gson.fromJson(routingContext.getBodyAsString(), Board.class);
-		boards.add(board.getID(), board);
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-				.end(gson.toJson(board));
-	}
-	
-	
-	
-	private void deleteOneAct(RoutingContext routingContext) {
-		int targetActuatorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
-		if (actuators.stream().anyMatch(sen -> sen.getID() == targetActuatorID)) {
-			Optional<Actuator> targetActuator = actuators.stream()
-	                .filter(Actuator -> Actuator.getID() == targetActuatorID)
-	                .findFirst();
-			if (targetActuator.isPresent()) {
-		        actuators.removeIf(sen -> sen.getID() == targetActuatorID);
-		        routingContext.response().setStatusCode(200).putHeader("content-type", "application/json; charset=utf-8")
-		                .end(gson.toJson(targetActuator.get()));
-			}
-		} else {
-			routingContext.response().setStatusCode(204).putHeader("content-type", "application/json; charset=utf-8")
-					.end("Actuator with ID:" + targetActuatorID + " doesnt exist");
-		}
+		mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("INSERT INTO dad.boards (id, assignedSensors, assignedActuators, date) VALUES (?, ?, ?, ?)")
+	                    .execute(Tuple.of(board.getID(), board.getDate()), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to insert data into the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
 	}
 	
 	private void deleteOneBoa(RoutingContext routingContext) {
-		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-		if (boards.stream().anyMatch(sen -> sen.getID() == targetBoardID)) {
-			Optional<Board> targetBoard = boards.stream()
-	                .filter(Board -> Board.getID() == targetBoardID)
-	                .findFirst();
-			if (targetBoard.isPresent()) {
-		        boards.removeIf(sen -> sen.getID() == targetBoardID);
-		        routingContext.response().setStatusCode(200).putHeader("content-type", "application/json; charset=utf-8")
-		                .end(gson.toJson(targetBoard.get()));
-			}
-		} else {
-			routingContext.response().setStatusCode(204).putHeader("content-type", "application/json; charset=utf-8")
-					.end("Board with ID:" + targetBoardID + " doesnt exist");
-		}
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("DELETE FROM dad.boards WHERE ID = ?")
+	                    .execute(Tuple.of(targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to delete data from the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
 	}
-
-	
-	
 	
 	private void putOneBoa(RoutingContext routingContext) {
-		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-		Optional<Board> ts = boards.stream()
-                .filter(Board -> Board.getID() == targetBoardID)
-                .findFirst();
-		final Board element = gson.fromJson(routingContext.getBodyAsString(), Board.class); //Board a añadir
-		if (ts.isPresent()){
-			Board targetBoard = ts.get();
-			
-			targetBoard.setID(element.getID());
-			targetBoard.setAssignedSensors(element.getAssignedSensors());
-			targetBoard.setAssignedActuators(element.getAssignedActuators());
-			targetBoard.setDate(element.getDate());		
-		}
-		routingContext.response().setStatusCode(201).putHeader("content-type", "application/json; charset=utf-8")
-		.end(gson.toJson(element));
+	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    Board board = gson.fromJson(routingContext.getBodyAsString(), Board.class);
+	    
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("UPDATE dad.boards SET ID = ?, date = ? WHERE ID = ?")
+	                    .execute(Tuple.of(board.getID(), board.getDate(), 
+	                    		targetBoardID), res -> {
+	                        if (res.succeeded()) {
+	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
+	                        } else {
+	                            routingContext.response().setStatusCode(500).end("Failed to update data in the database");
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
+	        }
+	    });
 	}
 	
-	private void createSomeData(int number) {
-		Random rnd = new Random();
-		sensors.add(new Sensor(1, 1, 0., "Type_" + 1, Calendar.getInstance().getTimeInMillis()));
-		IntStream.range(0, number).forEach(elem -> {
-			int id = rnd.nextInt();
-			sensors.add(new Sensor(id, 1, 0., "Type_" + id, Calendar.getInstance().getTimeInMillis()));
-		});
-		
-		actuators.add(new Actuator(1, 1, true, "Type_" + 1, new Timestamp(System.currentTimeMillis()+1)));
-		IntStream.range(0, number).forEach(elem -> {
-			int id = rnd.nextInt();
-			actuators.add(new Actuator(id, 1, true, "Type_" + id, new Timestamp(System.currentTimeMillis()+id)));
-		});
-		
-		List<Integer> example = new ArrayList<Integer>();
-		example.add(1);example.add(2);example.add(3);
-		boards.add(new Board(1, example, example, new Timestamp(System.currentTimeMillis()+1)));
-		IntStream.range(0, number).forEach(elem -> {
-			int id = rnd.nextInt();
-			boards.add(new Board(id, example, example, new Timestamp(System.currentTimeMillis()+id)));
-		});
-	}
-
+	
+	
 }

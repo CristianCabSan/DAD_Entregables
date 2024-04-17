@@ -1,20 +1,14 @@
 package es.us.lsi.dad;
 
-import java.sql.Timestamp;
-import java.util.List;
 import java.util.Objects;
 
 public class Board {
 	private Integer ID;
-	private List<Integer> assignedSensors;
-	private List<Integer> assignedActuators;
-	private Timestamp date;
+	private Long date;
 	
-	public Board(Integer iD, List<Integer> assignedSensors, List<Integer> assignedActuators, Timestamp date) {
+	public Board(Integer iD, Long date) {
 		super();
 		ID = iD;
-		this.assignedSensors = assignedSensors;
-		this.assignedActuators = assignedActuators;
 		this.date = date;
 	}
 
@@ -25,34 +19,18 @@ public class Board {
 	public void setID(Integer iD) {
 		ID = iD;
 	}
-	
-	public List<Integer> getAssignedSensors() {
-		return assignedSensors;
-	}
-	
-	public void setAssignedSensors(List<Integer> assignedSensors) {
-		this.assignedSensors = assignedSensors;
-	}
-	
-	public List<Integer> getAssignedActuators() {
-		return assignedActuators;
-	}
-	
-	public void setAssignedActuators(List<Integer> assignedActuators) {
-		this.assignedActuators = assignedActuators;
-	}
 
-	public Timestamp getDate() {
+	public long getDate() {
 		return date;
 	}
 
-	public void setDate(Timestamp date) {
+	public void setDate(long date) {
 		this.date = date;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(ID, assignedActuators, assignedSensors, date);
+		return Objects.hash(ID, date);
 	}
 
 	@Override
@@ -64,13 +42,11 @@ public class Board {
 		if (getClass() != obj.getClass())
 			return false;
 		Board other = (Board) obj;
-		return Objects.equals(ID, other.ID) && Objects.equals(assignedActuators, other.assignedActuators)
-				&& Objects.equals(assignedSensors, other.assignedSensors) && Objects.equals(date, other.date);
+		return Objects.equals(ID, other.ID) && Objects.equals(date, other.date);
 	}
 
 	@Override
 	public String toString() {
-		return "Board [ID=" + ID + ", assignedSensors=" + assignedSensors + ", assignedActuators=" + assignedActuators
-				+ ", date=" + date + "]";
+		return "Board [ID=" + ID + ", date=" + date + "]";
 	}
 }

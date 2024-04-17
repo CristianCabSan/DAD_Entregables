@@ -7,15 +7,15 @@ public class Actuator {
 	
 	private Integer ID;
 	private Integer boardID;
-	private Boolean active;
+	private Double value;
 	private String type;
-	private Timestamp date;
+	private Long date;
 	
-	public Actuator(Integer ID, Integer boardID, Boolean active, String type, Timestamp date) {
+	public Actuator(Integer ID, Integer boardID, Double value, String type, Long date) {
 		super();
 		this.setID(ID);
 		this.setBoardID(boardID);
-		this.setActive(active);
+		this.setValue(value);
 		this.setType(type);
 		this.setDate(date);
 	}
@@ -41,12 +41,12 @@ public class Actuator {
 		this.boardID = boardID;
 	}
 
-	public Boolean getActive() {
-		return active;
+	public Double getValue() {
+		return value;
 	}
 
-	public void setActive(Boolean active) {
-		this.active = active;
+	public void setValue(Double value) {
+		this.value = value;
 	}
 
 	public String getType() {
@@ -57,17 +57,17 @@ public class Actuator {
 		this.type = type;
 	}
 
-	public Timestamp getDate() {
+	public long getDate() {
 		return date;
 	}
 
-	public void setDate(Timestamp date) {
+	public void setDate(long date) {
 		this.date = date;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(ID, active, boardID, date, type);
+		return Objects.hash(ID, value, boardID, date, type);
 	}
 
 	@Override
@@ -79,14 +79,14 @@ public class Actuator {
 		if (getClass() != obj.getClass())
 			return false;
 		Actuator other = (Actuator) obj;
-		return Objects.equals(ID, other.ID) && Objects.equals(active, other.active)
+		return Objects.equals(ID, other.ID) && Objects.equals(value, other.value)
 				&& Objects.equals(boardID, other.boardID) && Objects.equals(date, other.date)
 				&& Objects.equals(type, other.type);
 	}
 
 	@Override
 	public String toString() {
-		return "Actuator [ID=" + ID + ", boardID=" + boardID + ", active=" + active + ", type="
+		return "Actuator [ID=" + ID + ", boardID=" + boardID + ", value=" + value + ", type="
 				+ type + ", date=" + date + "]";
 	}
 }
