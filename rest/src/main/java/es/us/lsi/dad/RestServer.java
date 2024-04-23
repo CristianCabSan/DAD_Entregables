@@ -81,7 +81,6 @@ public class RestServer extends AbstractVerticle {
 		router.delete("/api/sensors/:boardid/:sensorid").handler(this::deleteOneSen);
 		router.put("/api/sensors/:boardid/:sensorid").handler(this::putOneSen);
 		
-		
 		router.route("/api/actuators*").handler(BodyHandler.create());
 		router.get("/api/actuators/actuator/all").handler(this::getAllAct);
 		router.get("/api/actuators/:boardid").handler(this::getAllActFromBoard);
@@ -91,14 +90,8 @@ public class RestServer extends AbstractVerticle {
 		router.delete("/api/actuators/:actuatorid").handler(this::deleteOneAct);
 		router.put("/api/actuators/:boardid/:actuatorid").handler(this::putOneAct);
 		
-		router.route("/api/boards*").handler(BodyHandler.create());
-		router.get("/api/boards/board/all").handler(this::getAllBoa);
 		router.get("/api/boards/sensors/:boardid/:numberofvalues").handler(this::getLastNSenValuesFromBoa);
 		router.get("/api/boards/actuators/:boardid/:numberofvalues").handler(this::getLastNActValuesFromBoa);
-		router.post("/api/boards").handler(this::addOneBoa);
-		router.delete("/api/boards/:boardid").handler(this::deleteOneBoa);
-		router.put("/api/boards/:boardid").handler(this::putOneBoa);
-		//router.get("/api/boards/:boardid").handler(this::getOneBoa);
 		
 	}
 	@SuppressWarnings("unused")
@@ -481,31 +474,6 @@ public class RestServer extends AbstractVerticle {
 	
 	/*--------------------------------------------------------------------------------*/
 	
-	/*
-	private Integer ID;
-	private List<Integer> assignedSensors;
-	private List<Integer> assignedActuators;
-	private Timestamp date;
-	*/
-	
-	private void getAllBoa(RoutingContext routingContext) {
-		mySqlClient.query("SELECT * FROM dad.boards;").execute(res -> {
-			if(res.succeeded()) {
-				RowSet<Row> resultSet = res.result();
-				List<Board> result = new ArrayList<>();
-				for(Row elem : resultSet) {
-					result.add(new Board(
-							elem.getInteger("ID"),
-							elem.getLong("date")
-							));
-				}
-				routingContext.request().response().end(gson.toJson(result));
-			} else {
-				System.out.println("Error" + res.cause().getLocalizedMessage());
-				routingContext.request().response().setStatusCode(400).end();
-			}
-		});
-	}
 	
 	private void getLastNSenValuesFromBoa(RoutingContext routingContext) {
 		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
@@ -570,96 +538,6 @@ public class RestServer extends AbstractVerticle {
 	        }
 	    });
 	}
-	
-	/*
-	private void getOneBoa(RoutingContext routingContext) {
-	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-	    mySqlClient.getConnection(connection -> {
-	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ?")
-	                    .execute(Tuple.of(targetBoardID), res -> {
-	                        if (res.succeeded()) {
-	                            RowSet<Row> resultSet = res.result();
-	                            JsonArray result = new JsonArray();
-	                            for(Row elem : resultSet) {
-	            					result.add(new Board(
-	            							elem.getInteger("ID"),
-	            							elem.getLong("date")
-	            							));
-	            				}
-	                            routingContext.request().response().end(result.encode());
-	                        } else {
-	                            routingContext.request().response().setStatusCode(400).end();
-	                        }
-	                        connection.result().close();
-	                    });
-	        } else {
-	            routingContext.request().response().setStatusCode(400).end();
-	        }
-	    });
-	}
-	*/
-	
-	private void addOneBoa(RoutingContext routingContext) {
-		final Board board = gson.fromJson(routingContext.getBodyAsString(), Board.class);
-		mySqlClient.getConnection(connection -> {
-	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("INSERT INTO dad.boards (id, assignedSensors, assignedActuators, date) VALUES (?, ?, ?, ?)")
-	                    .execute(Tuple.of(board.getID(), board.getDate()), res -> {
-	                        if (res.succeeded()) {
-	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
-	                        } else {
-	                            routingContext.response().setStatusCode(500).end("Failed to insert data into the database");
-	                        }
-	                        connection.result().close();
-	                    });
-	        } else {
-	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
-	        }
-	    });
-	}
-	
-	private void deleteOneBoa(RoutingContext routingContext) {
-	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-	    mySqlClient.getConnection(connection -> {
-	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("DELETE FROM dad.boards WHERE ID = ?")
-	                    .execute(Tuple.of(targetBoardID), res -> {
-	                        if (res.succeeded()) {
-	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
-	                        } else {
-	                            routingContext.response().setStatusCode(500).end("Failed to delete data from the database");
-	                        }
-	                        connection.result().close();
-	                    });
-	        } else {
-	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
-	        }
-	    });
-	}
-	
-	private void putOneBoa(RoutingContext routingContext) {
-	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
-	    Board board = gson.fromJson(routingContext.getBodyAsString(), Board.class);
-	    
-	    mySqlClient.getConnection(connection -> {
-	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("UPDATE dad.boards SET ID = ?, date = ? WHERE ID = ?")
-	                    .execute(Tuple.of(board.getID(), board.getDate(), 
-	                    		targetBoardID), res -> {
-	                        if (res.succeeded()) {
-	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
-	                        } else {
-	                            routingContext.response().setStatusCode(500).end("Failed to update data in the database");
-	                        }
-	                        connection.result().close();
-	                    });
-	        } else {
-	            routingContext.response().setStatusCode(500).end("Failed to connect to the database");
-	        }
-	    });
-	}
-	
 	
 	
 }
