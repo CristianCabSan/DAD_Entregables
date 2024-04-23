@@ -495,7 +495,7 @@ public class RestServer extends AbstractVerticle {
 	            							elem.getLong("date"))
 	            							);
 	            				}
-	            				routingContext.request().response().end(gson.toJson(result) + "hola");
+	            				routingContext.request().response().end(gson.toJson(result));
 	            			} else {
 	                            routingContext.request().response().setStatusCode(400).end();
 	                        }
@@ -527,7 +527,7 @@ public class RestServer extends AbstractVerticle {
 	            							elem.getLong("date"))
 	            							);
 	            				}
-	            				routingContext.request().response().end(gson.toJson(result) + "hola");
+	            				routingContext.request().response().end(gson.toJson(result));
 	            			} else {
 	                            routingContext.request().response().setStatusCode(400).end();
 	                        }
