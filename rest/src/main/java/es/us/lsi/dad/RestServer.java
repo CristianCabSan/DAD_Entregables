@@ -1,31 +1,15 @@
 package es.us.lsi.dad;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.mysqlclient.MySQLClient;
 import io.vertx.mysqlclient.MySQLConnectOptions;
 import io.vertx.mysqlclient.MySQLPool;
 import io.vertx.sqlclient.PoolOptions;
@@ -92,7 +76,6 @@ public class RestServer extends AbstractVerticle {
 		
 		router.get("/api/boards/sensors/:boardid/:numberofvalues").handler(this::getLastNSenValuesFromBoa);
 		router.get("/api/boards/actuators/:boardid/:numberofvalues").handler(this::getLastNActValuesFromBoa);
-		
 	}
 	@SuppressWarnings("unused")
 	@Override
