@@ -1,12 +1,20 @@
 package es.us.lsi.dad;
 
-import java.sql.Timestamp;
 import java.util.Objects;
 
 public class Sensor {
 	
 	private Integer ID;
 	private Integer boardID;
+	private Integer groupID;
+	public Integer getGroupID() {
+		return groupID;
+	}
+
+	public void setGroupID(Integer groupID) {
+		this.groupID = groupID;
+	}
+
 	private Double value;
 	private String type;
 	private Long date;
@@ -15,14 +23,16 @@ public class Sensor {
 		super();
 	}
 	
-	public Sensor(Integer ID, Integer boardID, Double value, String type, Long date) {
+	public Sensor(Integer iD, Integer boardID, Integer groupID, Double value, String type, Long date) {
 		super();
-		this.setID(ID);
-		this.setBoardID(boardID);
-		this.setValue(value);
-		this.setType(type);
-		this.setDate(date);
+		ID = iD;
+		this.boardID = boardID;
+		this.groupID = groupID;
+		this.value = value;
+		this.type = type;
+		this.date = date;
 	}
+
 
 	public Long getDate() {
 		return date;
@@ -64,9 +74,10 @@ public class Sensor {
 		ID = iD;
 	}
 	
+	
 	@Override
 	public int hashCode() {
-		return Objects.hash(ID, boardID, date, type, value);
+		return Objects.hash(ID, boardID, date, groupID, type, value);
 	}
 
 	@Override
@@ -79,13 +90,13 @@ public class Sensor {
 			return false;
 		Sensor other = (Sensor) obj;
 		return Objects.equals(ID, other.ID) && Objects.equals(boardID, other.boardID)
-				&& Objects.equals(date, other.date)	
+				&& Objects.equals(date, other.date) && Objects.equals(groupID, other.groupID)
 				&& Objects.equals(type, other.type) && Objects.equals(value, other.value);
 	}
 
 	@Override
 	public String toString() {
-		return "Sensor [ID=" + ID + ", boardID=" + boardID + ", value=" + value + ", type=" + type
-				+ ", date=" + date + "]";
+		return "Sensor [ID=" + ID + ", boardID=" + boardID + ", groupID=" + groupID + ", value=" + value + ", type="
+				+ type + ", date=" + date + "]";
 	}
 }

@@ -58,24 +58,27 @@ public class RestServer extends AbstractVerticle {
 		// handling by /api/users* or /api/users/*
 		router.route("/api/sensors*").handler(BodyHandler.create());
 		router.get("/api/sensors/sensor/all").handler(this::getAllSen);
-		router.get("/api/sensors/:boardid").handler(this::getAllSenFromBoard);
-		router.get("/api/sensors/:boardid/:sensorid").handler(this::getOneSen);
-		router.get("/api/sensors/:boardid/:sensorid/:numberofvalues").handler(this::getLastNValuesFromSen);
+		router.get("/api/sensors/:groupid/:boardid").handler(this::getAllSenFromBoard);
+		router.get("/api/sensors/:groupid/:boardid/:sensorid").handler(this::getOneSen);
+		router.get("/api/sensors/:groupid/:boardid/:sensorid/:numberofvalues").handler(this::getLastNValuesFromSen);
 		router.post("/api/sensors").handler(this::addOneSen);
-		router.delete("/api/sensors/:boardid/:sensorid").handler(this::deleteOneSen);
-		router.put("/api/sensors/:boardid/:sensorid").handler(this::putOneSen);
+		router.delete("/api/sensors/:groupid/:boardid/:sensorid").handler(this::deleteOneSen);
+		router.put("/api/sensors/:groupid/:boardid/:sensorid").handler(this::putOneSen);
 		
 		router.route("/api/actuators*").handler(BodyHandler.create());
 		router.get("/api/actuators/actuator/all").handler(this::getAllAct);
-		router.get("/api/actuators/:boardid").handler(this::getAllActFromBoard);
-		router.get("/api/actuators/:boardid/:actuatorid").handler(this::getOneAct);
-		router.get("/api/actuators/:boardid/:actuatorid/:numberofvalues").handler(this::getLastNValuesFromAct);
+		router.get("/api/actuators/:groupid/:boardid").handler(this::getAllActFromBoard);
+		router.get("/api/actuators/:groupid/:boardid/:actuatorid").handler(this::getOneAct);
+		router.get("/api/actuators/:groupid/:boardid/:actuatorid/:numberofvalues").handler(this::getLastNValuesFromAct);
 		router.post("/api/actuators").handler(this::addOneAct);
-		router.delete("/api/actuators/:actuatorid").handler(this::deleteOneAct);
-		router.put("/api/actuators/:boardid/:actuatorid").handler(this::putOneAct);
+		router.delete("/api/actuators/:groupid/:actuatorid").handler(this::deleteOneAct);
+		router.put("/api/actuators/:groupid/:boardid/:actuatorid").handler(this::putOneAct);
 		
-		router.get("/api/boards/sensors/:boardid/:numberofvalues").handler(this::getLastNSenValuesFromBoa);
-		router.get("/api/boards/actuators/:boardid/:numberofvalues").handler(this::getLastNActValuesFromBoa);
+		router.get("/api/boards/sensors/:groupid/:boardid/:numberofvalues").handler(this::getLastNSenValuesFromBoa);
+		router.get("/api/boards/actuators/:groupid/:boardid/:numberofvalues").handler(this::getLastNActValuesFromBoa);
+		
+		router.get("/api/groups/sensors/:groupid/:numberofvalues").handler(this::getLastNSenValuesFromGroup);
+		router.get("/api/groups/actuators/:groupid/:numberofvalues").handler(this::getLastNActValuesFromGroup);
 	}
 	@SuppressWarnings("unused")
 	@Override
@@ -99,6 +102,7 @@ public class RestServer extends AbstractVerticle {
 					result.add(new Sensor(
 							elem.getInteger("ID"),
 							elem.getInteger("boardID"), 
+							elem.getInteger("groupID"),
 							elem.getDouble("value"), 
 							elem.getString("type"), 
 							elem.getLong("date"))
@@ -115,11 +119,13 @@ public class RestServer extends AbstractVerticle {
 	//Gets all the values over time of a certain sensor (both sensorid and boardid must be specified)
 	private void getOneSen(RoutingContext routingContext) {
 	    int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Sensor> result = new ArrayList<>();
@@ -127,6 +133,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Sensor(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -148,12 +155,13 @@ public class RestServer extends AbstractVerticle {
 	private void getLastNValuesFromSen(RoutingContext routingContext) {
 	    int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
 
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ? ORDER BY date DESC LIMIT ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID, numberOfValues), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE ID = ? AND boardID = ? AND groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID, numberOfValues), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Sensor> result = new ArrayList<>();
@@ -161,6 +169,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Sensor(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -181,17 +190,19 @@ public class RestServer extends AbstractVerticle {
 	//Gets all the sensor values from a certain board
 	private void getAllSenFromBoard(RoutingContext routingContext) {
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ?")
-	                    .execute(Tuple.of(targetBoardID), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ? AND groupID")
+	                    .execute(Tuple.of(targetBoardID, targetGroupID), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Sensor> result = new ArrayList<>();
 	            				for(Row elem : resultSet) {
 	            					result.add(new Sensor(
 	            							elem.getInteger("ID"),
-	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("boardID"),
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -214,8 +225,8 @@ public class RestServer extends AbstractVerticle {
 		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
 		mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("INSERT INTO sensors (id, boardID, value, type, date) VALUES (?, ?, ?, ?, ?)")
-	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
+	            connection.result().preparedQuery("INSERT INTO sensors (id, boardID, groupID, value, type, date) VALUES (?, ?, ?, ?, ?, ?)")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getGroupID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
 	                        } else {
@@ -233,10 +244,11 @@ public class RestServer extends AbstractVerticle {
 	private void deleteOneSen(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("DELETE FROM sensors WHERE ID = ? and boardID = ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("DELETE FROM sensors WHERE ID = ? AND boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
 	                        } else {
@@ -254,13 +266,14 @@ public class RestServer extends AbstractVerticle {
 	private void putOneSen(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("sensorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
 	    
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("UPDATE sensors SET ID = ?, boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
-	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate(), 
-	                    		targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("UPDATE sensors SET ID = ?, boardID = ?, groupID = ?, value = ?, type = ?, date = ? WHERE ID = ? AND boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getGroupID(), sensor.getValue(), sensor.getType(), sensor.getDate(), 
+	                    		targetSensorID, targetBoardID, targetGroupID), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
 	                        } else {
@@ -286,6 +299,7 @@ public class RestServer extends AbstractVerticle {
 					result.add(new Actuator(
 							elem.getInteger("ID"),
 							elem.getInteger("boardID"), 
+							elem.getInteger("groupID"),
 							elem.getDouble("value"), 
 							elem.getString("type"), 
 							elem.getLong("date"))
@@ -302,12 +316,13 @@ public class RestServer extends AbstractVerticle {
 	private void getLastNValuesFromAct(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
 
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ? ORDER BY date DESC LIMIT ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID, numberOfValues), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ? AND groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID, numberOfValues), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Actuator> result = new ArrayList<>();
@@ -315,6 +330,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Actuator(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -335,17 +351,19 @@ public class RestServer extends AbstractVerticle {
 	private void getOneAct(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE ID = ? AND boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Actuator> result = new ArrayList<>();
 	            				for(Row elem : resultSet) {
 	            					result.add(new Actuator(
 	            							elem.getInteger("ID"),
-	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("boardID"),
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -365,10 +383,11 @@ public class RestServer extends AbstractVerticle {
 	
 	private void getAllActFromBoard(RoutingContext routingContext) {
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ?")
-	                    .execute(Tuple.of(targetBoardID), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(targetBoardID, targetGroupID), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Actuator> result = new ArrayList<>();
@@ -376,6 +395,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Actuator(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -397,8 +417,8 @@ public class RestServer extends AbstractVerticle {
 		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
 		mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("INSERT INTO actuators (id, boardID, value, type, date) VALUES (?, ?, ?, ?, ?)")
-	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
+	            connection.result().preparedQuery("INSERT INTO actuators (id, boardID, groupID, value, type, date) VALUES (?, ?, ?, ?, ?, ?)")
+	                    .execute(Tuple.of(sensor.getID(), sensor.getBoardID(), sensor.getGroupID(), sensor.getValue(), sensor.getType(), sensor.getDate()), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(201).end("Data inserted successfully");
 	                        } else {
@@ -414,11 +434,12 @@ public class RestServer extends AbstractVerticle {
 	
 	private void deleteOneAct(RoutingContext routingContext) {
 		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+		int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("DELETE FROM actuators WHERE ID = ? and boardID = ?")
-	                    .execute(Tuple.of(targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("DELETE FROM actuators WHERE ID = ? AND boardID = ? AND groupID = ?")
+	                    .execute(Tuple.of(targetSensorID, targetBoardID, targetGroupID), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(200).end("Data deleted successfully");
 	                        } else {
@@ -433,15 +454,16 @@ public class RestServer extends AbstractVerticle {
 	}
 	
 	private void putOneAct(RoutingContext routingContext) {
-		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorsid"));
+		int targetSensorID = Integer.parseInt(routingContext.request().getParam("actuatorid"));
+		int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
 	    Actuator actuator = gson.fromJson(routingContext.getBodyAsString(), Actuator.class);
 	    
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("UPDATE actuators SET ID = ?, boardID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
-	                    .execute(Tuple.of(actuator.getID(), actuator.getBoardID(), actuator.getValue(), actuator.getType(), actuator.getDate(), 
-	                    		targetSensorID, targetBoardID), res -> {
+	            connection.result().preparedQuery("UPDATE actuators SET ID = ?, boardID = ?, groupID = ?, value = ?, type = ?, date = ? WHERE ID = ? and boardID = ?")
+	                    .execute(Tuple.of(actuator.getID(), actuator.getBoardID(), actuator.getGroupID(), actuator.getValue(), actuator.getType(), actuator.getDate(), 
+	                    		targetSensorID, targetBoardID, targetGroupID), res -> {
 	                        if (res.succeeded()) {
 	                            routingContext.response().setStatusCode(200).end("Data updated successfully");
 	                        } else {
@@ -460,12 +482,13 @@ public class RestServer extends AbstractVerticle {
 	
 	private void getLastNSenValuesFromBoa(RoutingContext routingContext) {
 		int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+		int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
 
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ? ORDER BY date DESC LIMIT ?")
-	                    .execute(Tuple.of(targetBoardID, numberOfValues), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE boardID = ? and groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetBoardID, targetGroupID, numberOfValues), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Sensor> result = new ArrayList<>();
@@ -473,6 +496,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Sensor(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -492,12 +516,13 @@ public class RestServer extends AbstractVerticle {
 	
 	private void getLastNActValuesFromBoa(RoutingContext routingContext) {
 	    int targetBoardID = Integer.parseInt(routingContext.request().getParam("boardid"));
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
 	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
 
 	    mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
-	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ? ORDER BY date DESC LIMIT ?")
-	                    .execute(Tuple.of(targetBoardID, numberOfValues), res -> {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE boardID = ? and groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetBoardID, targetGroupID, numberOfValues), res -> {
 	                    	if(res.succeeded()) {
 	            				RowSet<Row> resultSet = res.result();
 	            				List<Actuator> result = new ArrayList<>();
@@ -505,6 +530,7 @@ public class RestServer extends AbstractVerticle {
 	            					result.add(new Actuator(
 	            							elem.getInteger("ID"),
 	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
 	            							elem.getDouble("value"), 
 	            							elem.getString("type"), 
 	            							elem.getLong("date"))
@@ -522,5 +548,71 @@ public class RestServer extends AbstractVerticle {
 	    });
 	}
 	
+	/*--------------------------------------------------------------------------------*/
 	
+	private void getLastNSenValuesFromGroup(RoutingContext routingContext) {
+		int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.sensors WHERE groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetGroupID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Sensor> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Sensor(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"),
+	            							elem.getInteger("groupID"),
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
+	
+	private void getLastNActValuesFromGroup(RoutingContext routingContext) {
+	    int targetGroupID = Integer.parseInt(routingContext.request().getParam("groupid"));
+	    int numberOfValues = Integer.parseInt(routingContext.request().getParam("numberofvalues"));
+
+	    mySqlClient.getConnection(connection -> {
+	        if (connection.succeeded()) {
+	            connection.result().preparedQuery("SELECT * FROM dad.actuators WHERE groupID = ? ORDER BY date DESC LIMIT ?")
+	                    .execute(Tuple.of(targetGroupID, numberOfValues), res -> {
+	                    	if(res.succeeded()) {
+	            				RowSet<Row> resultSet = res.result();
+	            				List<Actuator> result = new ArrayList<>();
+	            				for(Row elem : resultSet) {
+	            					result.add(new Actuator(
+	            							elem.getInteger("ID"),
+	            							elem.getInteger("boardID"), 
+	            							elem.getInteger("groupID"),
+	            							elem.getDouble("value"), 
+	            							elem.getString("type"), 
+	            							elem.getLong("date"))
+	            							);
+	            				}
+	            				routingContext.request().response().end(gson.toJson(result));
+	            			} else {
+	                            routingContext.request().response().setStatusCode(400).end();
+	                        }
+	                        connection.result().close();
+	                    });
+	        } else {
+	            routingContext.request().response().setStatusCode(400).end();
+	        }
+	    });
+	}
 }
