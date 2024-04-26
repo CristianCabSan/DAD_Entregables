@@ -186,7 +186,6 @@ void deserializeDeviceBody(int httpResponseCode)
 }
 
 
-
 void deserializeSensorsFromDevice(int httpResponseCode)
 {
 
