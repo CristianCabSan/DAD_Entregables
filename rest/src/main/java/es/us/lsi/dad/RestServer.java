@@ -18,7 +18,6 @@ import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 
 
-
 public class RestServer extends AbstractVerticle {
 	private Gson gson;
 	MySQLPool mySqlClient;
