@@ -10,6 +10,8 @@ import io.vertx.core.Promise;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.mqtt.MqttClient;
+import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mysqlclient.MySQLConnectOptions;
 import io.vertx.mysqlclient.MySQLPool;
 import io.vertx.sqlclient.PoolOptions;
@@ -19,11 +21,11 @@ import io.vertx.sqlclient.Tuple;
 
 
 public class RestServer extends AbstractVerticle {
-	private Gson gson;
+	Gson gson;
 	MySQLPool mySqlClient;
-
+	
 	public void start(Promise<Void> startFuture) {
-		// Creating some synthetic data
+		
 		MySQLConnectOptions connectOptions = new MySQLConnectOptions()
 				.setPort(3306)
 				.setHost("localhost")
@@ -79,6 +81,7 @@ public class RestServer extends AbstractVerticle {
 		router.get("/api/groups/sensors/:groupid/:numberofvalues").handler(this::getLastNSenValuesFromGroup);
 		router.get("/api/groups/actuators/:groupid/:numberofvalues").handler(this::getLastNActValuesFromGroup);
 	}
+	
 	@SuppressWarnings("unused")
 	@Override
 	public void stop(Promise<Void> stopPromise) throws Exception {
