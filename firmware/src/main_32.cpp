@@ -2,8 +2,6 @@
 #include "ArduinoJson.h"
 #include <WiFiUdp.h>
 #include <list>
-#include <PubSubClient.h>
-//#include <RestClient.h>
 
 
 
@@ -12,10 +10,6 @@ const int BOARD_ID = 1;
 const int DEVICE_ID = 1;
 const int GROUP_ID = 1;
 const int numberOfValues = 2;
-
-WiFiClient espClient;
-PubSubClient pubsubClient(espClient);
-char msg[50];
 
 
 int test_delay = 1000; // so we don't spam the API
@@ -39,11 +33,6 @@ HTTPClient http;
 // Setup
 void setup()
 {
-  pubsubClient.setServer("192.168.0.111", 1883);
-  pubsubClient.setCallback(callback);
-
-
-
   Serial.begin(9600);
   Serial.println();
   Serial.print("Connecting to ");
@@ -67,34 +56,6 @@ void setup()
   Serial.println(WiFi.localIP());
   Serial.println("Setup!");
 }
-
-void callback(char* topic, byte* payload, unsigned int length) {
-	Serial.print("Mensaje recibido [");  
-	Serial.print(topic);  
-	Serial.print("] ");
-	String message = String((char *) payload);  
-	Serial.print(message);  
-	Serial.println();  
-
-	// Trabajar con el mensaje
-}
-
-void reconnect() {  
-	while (! pubsubClient.connected()) {    
-		Serial.print("Conectando al servidor MQTT");    
-		if (pubsubClient.connect("ESP8266Client")) {      
-			Serial.println("Conectado");      
-			pubsubClient.publish("topic_2", "Hola a todos");      
-			pubsubClient.subscribe("topic_1");    
-		} else {      
-			Serial.print("Error, rc=");      
-			Serial.print(pubsubClient.state());      
-			Serial.println(" Reintentando en 5 segundos");      
-			delay(5000);    
-		}  
-	}
-}
-
 
 String response;
 
@@ -438,14 +399,4 @@ void loop()
     POST_tests();
   }
   seguir = false;
-
-  if (!pubsubClient.connected()) {
-		reconnect();
-	}
-
-	pubsubClient.loop();
-	delay(5000);
-	snprintf (msg, 75, "Son las %ld", millis());
-	pubsubClient.publish("topic_2", msg);	
-
 }
