@@ -1,8 +1,7 @@
 #include <HTTPClient.h>
 #include "ArduinoJson.h"
 #include <WiFiUdp.h>
-#include <list>
-
+#include <PubSubClient.h>
 
 
 // Replace 0 by ID of this current device
@@ -30,6 +29,46 @@ HTTPClient http;
   */
 
 
+// MQTT configuration
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// Server IP, where de MQTT broker is deployed
+const char *MQTT_BROKER_ADRESS = "192.168.43.236"; //Mi IP
+const uint16_t MQTT_PORT = 1883;
+
+// Name for this MQTT client. La libreria PubSubClient lo necesita
+// Debe ser unico para cada placa
+const char *MQTT_CLIENT_NAME = "Placa_1";
+
+// callback a ejecutar cuando se recibe un mensaje
+// en este ejemplo, muestra por serial el mensaje recibido
+// lo podemos dejar casi igual
+void OnMqttReceived(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Received on ");
+  Serial.print(topic);
+  Serial.print(": ");
+
+  String content = "";
+  //Recorremos el puntero hasta llegar al tamaño dado
+  for (size_t i = 0; i < length; i++)
+  {
+    content.concat((char)payload[i]);
+  }
+  Serial.print(content); //Content va a ser el mensaje total
+  Serial.println();
+}
+
+// inicia la comunicacion MQTT
+// inicia establece el servidor y el callback al recibir un mensaje
+void InitMqtt()
+{
+  client.setServer(MQTT_BROKER_ADRESS, MQTT_PORT);
+  //Importante: Se ejecuta cada vez que se recibe un mensaje de un topic al que estemos suscrito
+  client.setCallback(OnMqttReceived);
+}
+
 // Setup
 void setup()
 {
@@ -50,11 +89,48 @@ void setup()
     Serial.print(".");
   }
 
+  InitMqtt();
+
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println("Setup!");
+}
+
+// conecta o reconecta al MQTT
+// consigue conectar -> suscribe a topic y publica un mensaje
+// no -> espera 5 segundos
+void ConnectMqtt()
+{
+  Serial.print("Starting MQTT connection...");
+  if (client.connect(MQTT_CLIENT_NAME))
+  {
+    //Ejmplo de suscripcion
+    client.subscribe("group_1");
+  }
+  else
+  {
+    Serial.print("Failed MQTT connection, rc=");
+    Serial.print(client.state());
+    Serial.println(" try again in 5 seconds");
+
+    delay(5000);
+  }
+}
+
+// gestiona la comunicación MQTT
+// comprueba que el cliente está conectado
+// no -> intenta reconectar
+// si -> llama al MQTT loop
+void HandleMqtt()
+{
+  if (!client.connected())
+  {
+    ConnectMqtt();
+  }
+  //Pregunta si hay mensaje
+  client.loop();
 }
 
 String response;
@@ -398,5 +474,8 @@ void loop()
     GET_tests();
     POST_tests();
   }
+  //Aqui añadir la estructura que veiamos en el inicio de:
+  //C:\Users\Cristian\Desktop\Asignaturas\3º\2do Cuatrimestre\DAD\Clases\30-04.txt
   seguir = false;
+  HandleMqtt();
 }

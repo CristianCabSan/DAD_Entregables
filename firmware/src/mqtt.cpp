@@ -1,7 +1,6 @@
-#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
- 
+ /*
 const char* ssid = "SiempreHome";
 const char* password = "d7?a35D9EnaPepXY?c!4";
 const char* mqtt_server = "192.168.0.155";
@@ -88,3 +87,4 @@ void loop() {
     client.publish("casa/despacho/temperatura", msg);
   }
 }
+*/
