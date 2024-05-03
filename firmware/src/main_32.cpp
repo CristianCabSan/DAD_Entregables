@@ -1,8 +1,17 @@
 #include <HTTPClient.h>
 #include "ArduinoJson.h"
 #include <WiFiUdp.h>
+<<<<<<< Updated upstream
 #include <PubSubClient.h>
 
+=======
+<<<<<<< Updated upstream
+#include <list>
+=======
+#include <PubSubClient.h>
+#include <string>
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 // Replace 0 by ID of this current device
 const int BOARD_ID = 1;
@@ -26,9 +35,18 @@ HTTPClient http;
   #define STASSID "DIGIFIBRA-9sYQ"  //"Your_Wifi_SSID"
   #define STAPSK "EyU4QyukeDHK"     //"Your_Wifi_PASSWORD"
   String serverName = "http://192.168.43.236:8084/";
+<<<<<<< Updated upstream
   */
 
 
+=======
+<<<<<<< Updated upstream
+=======
+  */
+
+
+
+>>>>>>> Stashed changes
 // MQTT configuration
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -67,6 +85,10 @@ void InitMqtt()
   client.setServer(MQTT_BROKER_ADRESS, MQTT_PORT);
   //Importante: Se ejecuta cada vez que se recibe un mensaje de un topic al que estemos suscrito
   client.setCallback(OnMqttReceived);
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 }
 
 // Setup
@@ -77,9 +99,6 @@ void setup()
   Serial.print("Connecting to ");
   Serial.println(STASSID);
 
-  /* Explicitly set the ESP32 to be a WiFi-client, otherwise, it by default,
-     would try to act as both a client and an access-point and could cause
-     network-issues with your other WiFi-devices on your WiFi-network. */
   WiFi.mode(WIFI_STA);
   WiFi.begin(STASSID, STAPSK);
 
@@ -95,9 +114,12 @@ void setup()
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  client.setServer(MQTT_BROKER_ADRESS, MQTT_PORT);
   Serial.println("Setup!");
+  
 }
 
+<<<<<<< Updated upstream
 // conecta o reconecta al MQTT
 // consigue conectar -> suscribe a topic y publica un mensaje
 // no -> espera 5 segundos
@@ -111,14 +133,36 @@ void ConnectMqtt()
   }
   else
   {
+=======
+<<<<<<< Updated upstream
+=======
+// conecta o reconecta al MQTT
+// consigue conectar -> suscribe a topic y publica un mensaje
+// no -> espera 5 segundos
+void ConnectMqtt() {
+  Serial.print("Starting MQTT connection...");
+  if (client.connect(MQTT_CLIENT_NAME)) {
+    Serial.println("Connected to MQTT broker");
+    // Subscribe to topics after successful connection
+    client.subscribe("group_1");
+  } else {
+>>>>>>> Stashed changes
     Serial.print("Failed MQTT connection, rc=");
     Serial.print(client.state());
     Serial.println(" try again in 5 seconds");
 
+<<<<<<< Updated upstream
+=======
+    // Wait for a period of time before retrying
+>>>>>>> Stashed changes
     delay(5000);
   }
 }
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 // gestiona la comunicación MQTT
 // comprueba que el cliente está conectado
 // no -> intenta reconectar
@@ -133,6 +177,10 @@ void HandleMqtt()
   client.loop();
 }
 
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 String response;
 
 String serializeSensorValueBody(int ID, int boardID, int groupID, double value, String type, long date)
@@ -161,7 +209,6 @@ String serializeSensorValueBody(int ID, int boardID, int groupID, double value, 
   return output;
 }
 
-
 String serializeActuatorStatusBody(int ID, int boardID, int groupID, double value, String type, long date)
 {
   DynamicJsonDocument doc(2048);
@@ -182,7 +229,6 @@ String serializeActuatorStatusBody(int ID, int boardID, int groupID, double valu
   return output;
 }
 
-
 String serializeDeviceBody(int ID, long date)
 {
   DynamicJsonDocument doc(2048);
@@ -196,7 +242,6 @@ String serializeDeviceBody(int ID, long date)
 
   return output;
 }
-
 
 void deserializeActuatorStatusBody(String responseJson)
 {
@@ -226,7 +271,6 @@ void deserializeActuatorStatusBody(String responseJson)
     Serial.println(("Sensor deserialized: [sensorID: " + String(ID) + ", boardID: " + boardID + ", groupID: " + groupID + ", value: " + value + ", type: " + type + ", date: " + date  + "]").c_str());
   }
 }
-
 
 void deserializeDeviceBody(int httpResponseCode)
 {
@@ -262,7 +306,6 @@ void deserializeDeviceBody(int httpResponseCode)
     Serial.println(httpResponseCode);
   }
 }
-
 
 void deserializeSensorsFromDevice(int httpResponseCode)
 {
@@ -373,9 +416,8 @@ void describe(char *description)
 
 void GET_tests()
 {
-  
-  describe("----Todos los sensores de la placa 1----");
   String serverPath = serverName + "api/sensors/" + String(GROUP_ID) +  "/" + String(BOARD_ID);
+  describe("----Todos los sensores de la placa 1----");
   http.begin(serverPath.c_str());
   // test_response(http.GET());
   deserializeSensorsFromDevice(http.GET());
@@ -444,16 +486,17 @@ void GET_tests()
 
 void POST_tests()
 {
-  
+  /*
   String actuator_states_body = serializeActuatorStatusBody(random(1, 10), random(1, 10), random(1, 10), 10.0, "ActuadorPrueba", millis());
   describe("Test POST with actuator state");
   String serverPath = serverName + "api/actuators";
   http.begin(serverPath.c_str());
   test_response(http.POST(actuator_states_body));
+  */
 
-  String sensor_value_body = serializeSensorValueBody(random(1, 10), random(1, 10), random(1, 10), 10.0, "SensorPrueba", millis());
   describe("Test POST with sensor value");
-  serverPath = serverName + "api/sensors";
+  String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, 10.0, "SensorPrueba", millis());
+  String serverPath = serverName + "api/sensors";
   http.begin(serverPath.c_str());
   test_response(http.POST(sensor_value_body));
 
@@ -470,8 +513,9 @@ bool seguir = true;
 // Run the tests!
 void loop()
 {
-  if(seguir == true) {
-    GET_tests();
+  HandleMqtt();
+  if(seguir) {
+    //GET_tests();
     POST_tests();
   }
   //Aqui añadir la estructura que veiamos en el inicio de:
