@@ -417,7 +417,7 @@ public class RestServer extends AbstractVerticle {
 	}
 	
 	private void addOneAct(RoutingContext routingContext) {
-		final Sensor actuator = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+		final Actuator actuator = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
 		mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
 	            connection.result().preparedQuery("INSERT INTO actuators (id, boardID, groupID, value, type, date) VALUES (?, ?, ?, ?, ?, ?)")
