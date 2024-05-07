@@ -232,6 +232,7 @@ public class RestServer extends AbstractVerticle {
 	//Creates a new instance of sensor value
 	private void addOneSen(RoutingContext routingContext) {
 		final Sensor sensor = gson.fromJson(routingContext.getBodyAsString(), Sensor.class);
+		mqttClient.publish("group_" + sensor.getGroupID(), Buffer.buffer(sensor.getValue().toString()), MqttQoS.AT_LEAST_ONCE, false, false);
 		mySqlClient.getConnection(connection -> {
 	        if (connection.succeeded()) {
 	            connection.result().preparedQuery("INSERT INTO sensors (id, boardID, groupID, value, type, date) VALUES (?, ?, ?, ?, ?, ?)")

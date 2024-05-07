@@ -1,17 +1,8 @@
 #include <HTTPClient.h>
 #include "ArduinoJson.h"
+#include <PubSubClient.h>
 #include <WiFiUdp.h>
-<<<<<<< Updated upstream
-#include <PubSubClient.h>
-
-=======
-<<<<<<< Updated upstream
-#include <list>
-=======
-#include <PubSubClient.h>
 #include <string>
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 // Replace 0 by ID of this current device
 const int BOARD_ID = 1;
@@ -35,18 +26,8 @@ HTTPClient http;
   #define STASSID "DIGIFIBRA-9sYQ"  //"Your_Wifi_SSID"
   #define STAPSK "EyU4QyukeDHK"     //"Your_Wifi_PASSWORD"
   String serverName = "http://192.168.43.236:8084/";
-<<<<<<< Updated upstream
   */
 
-
-=======
-<<<<<<< Updated upstream
-=======
-  */
-
-
-
->>>>>>> Stashed changes
 // MQTT configuration
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -85,10 +66,6 @@ void InitMqtt()
   client.setServer(MQTT_BROKER_ADRESS, MQTT_PORT);
   //Importante: Se ejecuta cada vez que se recibe un mensaje de un topic al que estemos suscrito
   client.setCallback(OnMqttReceived);
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 }
 
 // Setup
@@ -119,7 +96,6 @@ void setup()
   
 }
 
-<<<<<<< Updated upstream
 // conecta o reconecta al MQTT
 // consigue conectar -> suscribe a topic y publica un mensaje
 // no -> espera 5 segundos
@@ -133,36 +109,14 @@ void ConnectMqtt()
   }
   else
   {
-=======
-<<<<<<< Updated upstream
-=======
-// conecta o reconecta al MQTT
-// consigue conectar -> suscribe a topic y publica un mensaje
-// no -> espera 5 segundos
-void ConnectMqtt() {
-  Serial.print("Starting MQTT connection...");
-  if (client.connect(MQTT_CLIENT_NAME)) {
-    Serial.println("Connected to MQTT broker");
-    // Subscribe to topics after successful connection
-    client.subscribe("group_1");
-  } else {
->>>>>>> Stashed changes
     Serial.print("Failed MQTT connection, rc=");
     Serial.print(client.state());
     Serial.println(" try again in 5 seconds");
 
-<<<<<<< Updated upstream
-=======
-    // Wait for a period of time before retrying
->>>>>>> Stashed changes
     delay(5000);
   }
 }
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 // gestiona la comunicación MQTT
 // comprueba que el cliente está conectado
 // no -> intenta reconectar
@@ -177,10 +131,6 @@ void HandleMqtt()
   client.loop();
 }
 
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 String response;
 
 String serializeSensorValueBody(int ID, int boardID, int groupID, double value, String type, long date)
@@ -486,17 +436,19 @@ void GET_tests()
 
 void POST_tests()
 {
+  String serverPath;
   /*
   String actuator_states_body = serializeActuatorStatusBody(random(1, 10), random(1, 10), random(1, 10), 10.0, "ActuadorPrueba", millis());
   describe("Test POST with actuator state");
-  String serverPath = serverName + "api/actuators";
+  serverPath = serverName + "api/actuators";
   http.begin(serverPath.c_str());
   test_response(http.POST(actuator_states_body));
   */
 
+
   describe("Test POST with sensor value");
   String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, 10.0, "SensorPrueba", millis());
-  String serverPath = serverName + "api/sensors";
+  serverPath = serverName + "api/sensors";
   http.begin(serverPath.c_str());
   test_response(http.POST(sensor_value_body));
 
