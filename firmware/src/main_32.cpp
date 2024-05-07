@@ -104,6 +104,7 @@ void ConnectMqtt()
   if (client.connect(MQTT_CLIENT_NAME))
   {
     //Ejmplo de suscripcion
+    Serial.print("Connected");
     client.subscribe("group_1");
     client.subscribe("group_1/sensor_1");
     client.subscribe("group_2");
@@ -433,18 +434,25 @@ void POST_tests()
   
 }
 
-bool seguir = true;
+unsigned long previousMillis = 0;
+const long interval = 10000; //Tiempo en ms entre ejecucion
 
 // Run the tests!
 void loop()
 {
   HandleMqtt();
-  if(seguir) {
-    //GET_tests();
-    POST_tests();
+  unsigned long currentMillis = millis();
+  unsigned long diferencia = currentMillis - previousMillis;
+
+  //Añadir comprobacion de conexion antes de empezar a enviar
+  if (diferencia >= interval) {
+    previousMillis = currentMillis;
+    describe("Test POST with sensor value");
+    String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, random(1, 10), "SensorPrueba", millis());
+    String serverPath = serverName + "api/sensors";
+    http.begin(serverPath.c_str());
+    test_response(http.POST(sensor_value_body));
+    
+    //Serial.println("Mandado: " + String(diferencia) + "s");
   }
-  //Aqui añadir la estructura que veiamos en el inicio de:
-  //C:\Users\Cristian\Desktop\Asignaturas\3º\2do Cuatrimestre\DAD\Clases\30-04.txt
-  seguir = false;
-  HandleMqtt();
 }
