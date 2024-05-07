@@ -4,17 +4,14 @@
 #include <WiFiUdp.h>
 #include <string>
 
-// Replace 0 by ID of this current device
 const int BOARD_ID = 1;
 const int DEVICE_ID = 1;
 const int GROUP_ID = 1;
 const int numberOfValues = 2;
-
+const int ledPin = 2;
 
 int test_delay = 1000; // so we don't spam the API
 boolean describe_tests = true;
-
-// Replace 0.0.0.0 by your server local IP (ipconfig [windows] or ifconfig [Linux o MacOS] gets IP assigned to your PC)
 HTTPClient http;
 
 // Replace WifiName and WifiPassword by your WiFi credentials
@@ -40,9 +37,7 @@ const uint16_t MQTT_PORT = 1883;
 // Debe ser unico para cada placa
 const char *MQTT_CLIENT_NAME = "Placa_1";
 
-// callback a ejecutar cuando se recibe un mensaje
-// en este ejemplo, muestra por serial el mensaje recibido
-// lo podemos dejar casi igual
+// Callback a ejecutar cuando se recibe un mensaje
 void OnMqttReceived(char *topic, byte *payload, unsigned int length)
 {
   Serial.print("Received on ");
@@ -50,21 +45,24 @@ void OnMqttReceived(char *topic, byte *payload, unsigned int length)
   Serial.print(": ");
 
   String content = "";
-  //Recorremos el puntero hasta llegar al tamaño dado
   for (size_t i = 0; i < length; i++)
   {
     content.concat((char)payload[i]);
   }
-  Serial.print(content); //Content va a ser el mensaje total
+  if (strcmp(topic, "group_1") == 0) {
+    if(content == "ON"){
+      digitalWrite(ledPin, HIGH);
+    } else if (content == "OFF"){
+      digitalWrite(ledPin, LOW);
+    }
+  }
+  Serial.print(content);
   Serial.println();
 }
 
-// inicia la comunicacion MQTT
-// inicia establece el servidor y el callback al recibir un mensaje
 void InitMqtt()
 {
   client.setServer(MQTT_BROKER_ADRESS, MQTT_PORT);
-  //Importante: Se ejecuta cada vez que se recibe un mensaje de un topic al que estemos suscrito
   client.setCallback(OnMqttReceived);
 }
 
@@ -75,6 +73,7 @@ void setup()
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(STASSID);
+  pinMode(ledPin, OUTPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(STASSID, STAPSK);
@@ -106,28 +105,24 @@ void ConnectMqtt()
   {
     //Ejmplo de suscripcion
     client.subscribe("group_1");
+    client.subscribe("group_1/sensor_1");
+    client.subscribe("group_2");
   }
   else
   {
     Serial.print("Failed MQTT connection, rc=");
     Serial.print(client.state());
     Serial.println(" try again in 5 seconds");
-
     delay(5000);
   }
 }
 
-// gestiona la comunicación MQTT
-// comprueba que el cliente está conectado
-// no -> intenta reconectar
-// si -> llama al MQTT loop
 void HandleMqtt()
 {
   if (!client.connected())
   {
     ConnectMqtt();
   }
-  //Pregunta si hay mensaje
   client.loop();
 }
 
@@ -135,13 +130,7 @@ String response;
 
 String serializeSensorValueBody(int ID, int boardID, int groupID, double value, String type, long date)
 {
-  // StaticJsonObject allocates memory on the stack, it can be
-  // replaced by DynamicJsonDocument which allocates in the heap.
-  //
   DynamicJsonDocument doc(2048);
-
-  // Add values in the document
-  //
   doc["ID"] = ID;
   doc["boardID"] = boardID;
   doc["groupID"] = groupID;
@@ -150,8 +139,6 @@ String serializeSensorValueBody(int ID, int boardID, int groupID, double value, 
   doc["date"] = date;
   doc["removed"] = false;
 
-  // Generate the minified JSON and send it to the Serial port.
-  //
   String output;
   serializeJson(doc, output);
   Serial.println(output);
@@ -162,7 +149,6 @@ String serializeSensorValueBody(int ID, int boardID, int groupID, double value, 
 String serializeActuatorStatusBody(int ID, int boardID, int groupID, double value, String type, long date)
 {
   DynamicJsonDocument doc(2048);
-
   doc["ID"] = ID;
   doc["boardID"] = boardID;
   doc["groupID"] = groupID;
@@ -182,7 +168,6 @@ String serializeActuatorStatusBody(int ID, int boardID, int groupID, double valu
 String serializeDeviceBody(int ID, long date)
 {
   DynamicJsonDocument doc(2048);
-
   doc["ID"] = ID;
   doc["date"] = date;
 
@@ -198,11 +183,8 @@ void deserializeActuatorStatusBody(String responseJson)
   if (responseJson != "")
   {
     DynamicJsonDocument doc(2048);
-
-    // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, responseJson);
 
-    // Test if parsing succeeds.
     if (error)
     {
       Serial.print(F("deserializeJson() failed: "));
@@ -210,7 +192,6 @@ void deserializeActuatorStatusBody(String responseJson)
       return;
     }
 
-    // Fetch values.
     int ID = doc["ID"];
     int boardID = doc["boardID"];
     int groupID = doc["groupID"];
@@ -265,10 +246,8 @@ void deserializeSensorsFromDevice(int httpResponseCode)
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
     String responseJson = http.getString();
-    // allocate the memory for the document
     DynamicJsonDocument doc(ESP.getMaxAllocHeap());
 
-    // parse a JSON array
     DeserializationError error = deserializeJson(doc, responseJson);
 
     if (error)
@@ -277,8 +256,6 @@ void deserializeSensorsFromDevice(int httpResponseCode)
       Serial.println(error.f_str());
       return;
     }
-
-    // extract the values
     
     JsonArray array = doc.as<JsonArray>();
     for (JsonObject sensor : array)
@@ -308,10 +285,8 @@ void deserializeActuatorsFromDevice(int httpResponseCode)
     Serial.print("HTTP Response code: ");
     Serial.println(httpResponseCode);
     String responseJson = http.getString();
-    // allocate the memory for the document
     DynamicJsonDocument doc(ESP.getMaxAllocHeap());
 
-    // parse a JSON array
     DeserializationError error = deserializeJson(doc, responseJson);
 
     if (error)
@@ -321,7 +296,6 @@ void deserializeActuatorsFromDevice(int httpResponseCode)
       return;
     }
 
-    // extract the values
     JsonArray array = doc.as<JsonArray>();
     for (JsonObject actuator : array)
     {
@@ -369,7 +343,6 @@ void GET_tests()
   String serverPath = serverName + "api/sensors/" + String(GROUP_ID) +  "/" + String(BOARD_ID);
   describe("----Todos los sensores de la placa 1----");
   http.begin(serverPath.c_str());
-  // test_response(http.GET());
   deserializeSensorsFromDevice(http.GET());
   describe("----------------------------");
 
