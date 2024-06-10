@@ -34,6 +34,7 @@ public class RestServer extends AbstractVerticle {
     int threshold = 3500;
     String topic = "group_1";
 
+    
     public void start(Promise<Void> startPromise) {
         // Configure and connect the MQTT client
         mqttClient = MqttClient.create(vertx, new MqttClientOptions().setAutoKeepAlive(true));
