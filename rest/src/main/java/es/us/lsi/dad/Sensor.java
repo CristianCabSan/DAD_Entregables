@@ -15,7 +15,7 @@ public class Sensor {
 		this.groupID = groupID;
 	}
 
-	private Double value;
+	private Integer value;
 	private String type;
 	private Long date;
 	
@@ -23,7 +23,7 @@ public class Sensor {
 		super();
 	}
 	
-	public Sensor(Integer iD, Integer boardID, Integer groupID, Double value, String type, Long date) {
+	public Sensor(Integer iD, Integer boardID, Integer groupID, Integer value, String type, Long date) {
 		super();
 		ID = iD;
 		this.boardID = boardID;
@@ -50,11 +50,11 @@ public class Sensor {
 		this.type = type;
 	}
 
-	public Double getValue() {
+	public Integer getValue() {
 		return value;
 	}
 
-	public void setValue(Double value) {
+	public void setValue(Integer value) {
 		this.value = value;
 	}
 

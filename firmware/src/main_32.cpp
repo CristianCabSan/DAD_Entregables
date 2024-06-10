@@ -8,29 +8,32 @@ const int BOARD_ID = 1;
 const int DEVICE_ID = 1;
 const int GROUP_ID = 1;
 const int numberOfValues = 2;
-const int ledPin = 2;
+const int actuatorPin = 25;
+const int sensorPin = 34;
 
 int test_delay = 1000; // so we don't spam the API
 boolean describe_tests = true;
+boolean active = true;
 HTTPClient http;
 
 // Replace WifiName and WifiPassword by your WiFi credentials
+  /*
   #define STASSID "Redmi"           //"Your_Wifi_SSID"
   #define STAPSK "1234abcd"         //"Your_Wifi_PASSWORD"
   String serverName = "http://192.168.43.236:8084/";
-
-  /*
+  */
+  
   #define STASSID "DIGIFIBRA-9sYQ"  //"Your_Wifi_SSID"
   #define STAPSK "EyU4QyukeDHK"     //"Your_Wifi_PASSWORD"
-  String serverName = "http://192.168.43.236:8084/";
-  */
+  String serverName = "http://192.168.1.141:8084/";
+  
 
 // MQTT configuration
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 // Server IP, where de MQTT broker is deployed
-const char *MQTT_BROKER_ADRESS = "192.168.43.236"; //Mi IP
+const char *MQTT_BROKER_ADRESS = "192.168.1.141"; //Mi IP
 const uint16_t MQTT_PORT = 1883;
 
 // Name for this MQTT client. La libreria PubSubClient lo necesita
@@ -51,9 +54,13 @@ void OnMqttReceived(char *topic, byte *payload, unsigned int length)
   }
   if (strcmp(topic, "group_1") == 0) {
     if(content == "ON"){
-      digitalWrite(ledPin, HIGH);
+      digitalWrite(actuatorPin, HIGH);
     } else if (content == "OFF"){
-      digitalWrite(ledPin, LOW);
+      digitalWrite(actuatorPin, LOW);
+    } else if (content == "start"){
+        active = true;
+    } else if (content = "stop"){
+        active = false;
     }
   }
   Serial.print(content);
@@ -73,7 +80,8 @@ void setup()
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(STASSID);
-  pinMode(ledPin, OUTPUT);
+  pinMode(actuatorPin, OUTPUT);
+  pinMode(sensorPin, INPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(STASSID, STAPSK);
@@ -411,48 +419,31 @@ void GET_tests()
 void POST_tests()
 {
   String serverPath;
-  /*
-  String actuator_states_body = serializeActuatorStatusBody(random(1, 10), random(1, 10), random(1, 10), 10.0, "ActuadorPrueba", millis());
-  describe("Test POST with actuator state");
-  serverPath = serverName + "api/actuators";
-  http.begin(serverPath.c_str());
-  test_response(http.POST(actuator_states_body));
-  */
-
-
   describe("Test POST with sensor value");
   String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, 10.0, "SensorPrueba", millis());
   serverPath = serverName + "api/sensors";
   http.begin(serverPath.c_str());
   test_response(http.POST(sensor_value_body));
-
-  // String device_body = serializeDeviceBody(String(DEVICE_ID), ("Name_" + String(DEVICE_ID)).c_str(), ("mqtt_" + String(DEVICE_ID)).c_str(), 12);
-  // describe("Test POST with path and body and response");
-  // serverPath = serverName + "api/device";
-  // http.begin(serverPath.c_str());
-  // test_response(http.POST(actuator_states_body));
-  
 }
 
 unsigned long previousMillis = 0;
 const long interval = 10000; //Tiempo en ms entre ejecucion
 
-// Run the tests!
 void loop()
 {
-  HandleMqtt();
+  
+    HandleMqtt();
+
   unsigned long currentMillis = millis();
   unsigned long diferencia = currentMillis - previousMillis;
 
   //Añadir comprobacion de conexion antes de empezar a enviar
-  if (diferencia >= interval) {
+  if (diferencia >= interval && active == true) {
     previousMillis = currentMillis;
-    describe("Test POST with sensor value");
-    String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, random(1, 10), "SensorPrueba", millis());
+    int value = analogRead(sensorPin);
+    String sensor_value_body = serializeSensorValueBody(DEVICE_ID, BOARD_ID, GROUP_ID, value , "SensorPrueba", millis());
     String serverPath = serverName + "api/sensors";
     http.begin(serverPath.c_str());
     test_response(http.POST(sensor_value_body));
-    
-    //Serial.println("Mandado: " + String(diferencia) + "s");
   }
 }

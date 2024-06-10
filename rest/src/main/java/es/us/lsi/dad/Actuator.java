@@ -8,11 +8,11 @@ public class Actuator {
 	private Integer ID;
 	private Integer boardID;
 	private Integer groupID;
-	private Double value;
+	private Integer value;
 	private String type;
 	private Long date;
 	
-	public Actuator(Integer iD, Integer boardID, Integer groupID, Double value, String type, Long date) {
+	public Actuator(Integer iD, Integer boardID, Integer groupID, Integer value, String type, Long date) {
 		super();
 		ID = iD;
 		this.boardID = boardID;
@@ -57,11 +57,11 @@ public class Actuator {
 	}
 
 
-	public Double getValue() {
+	public Integer getValue() {
 		return value;
 	}
 
-	public void setValue(Double value) {
+	public void setValue(Integer value) {
 		this.value = value;
 	}
 

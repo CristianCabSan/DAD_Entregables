@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+		    display: flex;
+           	width: 90%;
+            max-width: 1400px;
+            height: 90%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+		}
+
+		.sidebar {
+		    width: 200px;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative; /* Ensure the GitHub icon is positioned at the bottom */
+		}
+		
+		.content {
+		    flex: 3;
+		    display: flex;
+		    background-color: white;
+		    flex-direction: column;
+		}
+		
+		.option-title {
+		    flex: 1;
+		    font-size: 24px;
+		    text-align: center;
+		    background-color: #34495e;
+		    color: white;
+		    display: flex;
+		    align-items: center; /* Center vertically */
+		    justify-content: center; /* Center horizontally */
+		}
+		
+		.content-section {
+		    flex: 3;
+            display: flex;
+            padding: 0px 50px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+		}
+
+        .sidebar .title {
+            font-size: 40px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .sidebar button {
+            display: block;
+            width: 100%;
+            height: calc(15px + 10%);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: none;
+            background-color: #34495e;
+            color: white;
+            cursor: pointer;
+            text-align: left;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar button.active, .sidebar button:hover {
+            background-color: #1abc9c;
+        }
+
+        .sidebar a.github-link {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .github-icon {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .github-link:hover .github-icon {
+            fill: #1abc9c;
+        }
+        
+        .input-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            align-items: center;
+            height: 20%;
+            padding: 12% 5% 0% 0%;
+        }
+        
+        .display-container{
+        	display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 20%;
+            padding: 12% 5% 0% 0%;
+        }
+        
+        .trackbar-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 20%;
+            padding: 10% 5% 0% 0%;
+        }
+		
+		.button-container button {
+		    width: 50%; /* Adjust the width as needed */
+		    height: 50px;
+		    margin: 0 10px; /* Adjust the margins as needed */
+		    padding: 10px 20px;
+		    background-color: #1abc9c;
+		    color: white;
+		    border: none;
+		    border-radius: 5px;
+		    cursor: pointer;
+		    font-size: 20px;
+		    box-sizing: border-box;
+		}
+
+        .input-container input[type='text'] {
+            width: calc(80% - 60px);
+            height: 50px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+            font-size: 30px;
+            box-sizing: border-box;
+        }
+
+        .input-container button {
+            padding: 10px 20px;
+            height: 50px;
+            background-color: #1abc9c;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            box-sizing: border-box;
+            font-size: 20px
+        }
+        
+        .error-message {
+            color: red;
+            display: none; /* Hide the error message by default */
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+            justify-content: center;
+            
+        }
+
+        .trackbar-container input[type='range'] {
+            flex: 1;
+        }
+
+        .trackbar-container #trackbarValue {
+            margin-left: 10px;
+        }
+
+        .trackbar-container button {
+            padding: 10px 20px;
+            background-color: #1abc9c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 20px;
+        }
+
+        .textarea-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .textarea-container textarea {
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+		
+		.display-title{
+			margin-top: 10px;
+			color: lightgray;
+			font-size: 20px;
+			display:flex; 
+			justify-content: center;
+		}
+		
+        .error-message.show {
+            display: flex;
+            opacity: 1;
+            animation: slideDown 0.5s ease-out;
+            margin-bottom: 5px;
+        }
+        @keyframes slideDown {
+            0% {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .status-indicator {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: red; /* Default to red */
+            margin-left: 10px;
+        }        
+        
+        
+        
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="title">Configuration Panel</div>
+            <button class="active" onclick="showOption('startStop')">Start/Stop</button>
+            <button onclick="showOption('threshold')">Threshold</button>
+            <button onclick="showOption('onOff')">Force Watering</button>
+            <button onclick="showOption('groupID')">GroupID</button>
+            <a href="https://github.com/CristianCabSan/DAD_Entregables/tree/Entregable-6" class="github-link" target="_blank">
+                <svg class="github-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.26.82-.577v-2.045c-3.338.726-4.042-1.415-4.042-1.415-.546-1.387-1.333-1.758-1.333-1.758-1.09-.745.083-.729.083-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.775.419-1.305.763-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.467-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.007-.322 3.3 1.23.957-.266 1.983-.398 3.003-.403 1.02.005 2.047.137 3.006.403 2.29-1.553 3.295-1.23 3.295-1.23.654 1.653.242 2.873.12 3.176.77.84 1.233 1.91 1.233 3.22 0 4.61-2.803 5.625-5.473 5.92.43.372.814 1.103.814 2.222v3.293c0 .32.216.694.824.576C20.565 21.796 24 17.298 24 12c0-6.627-5.373-12-12-12z"/>
+                </svg>
+            </a>
+        </div>
+        <div class="content">
+            <div class="option-title">Start/Stop
+            	<div id="statusIndicator" class="status-indicator"></div>
+            </div>
+            <div class="content-section">
+            
+                <div id="startStop" class="display-container">
+                    <div class="button-container">
+                    	<button onclick="sendData('start')">Start</button>
+                    	<button onclick="sendData('stop')">Stop</button>
+                	</div>
+                	<div class="display-title">
+                		Starts or stops the microcontroller from completely sending new sensor values.
+                	</div>
+                </div>
+                
+                <div id="threshold" class="display-container">
+                	<div class=trackbar-container>
+	                    <input type="range" id="trackbar" min="0" max="4095" value="3500" oninput="updateTrackbarValue(this.value)">
+	                    <div id="trackbarValue">3500</div>
+	                    <button onclick="sendThreshold()">Send</button>
+                    </div>
+                    <div class="display-title">
+                		Changes the threshold at which the system determines whether a new sensor value is ON or OFF.
+                	</div>
+                </div>
+                
+                <div id="onOff" class="display-container">
+                	<div class="button-container">
+                		<button onclick="sendData('ON')">Water</button>
+                    	<button onclick="sendData('OFF')">Stop Water</button>
+                	</div>
+                	<div class="display-title">
+                		Forces activation of the water pump. Remember to press 'Stop Water' or it will pump indefinitely.
+                	</div>
+                </div>
+                
+                <div id="groupID" class="display-container">
+			        <div class="input-container">
+			            <input type="text" id="groupTextBox" placeholder="Ex:'group1'">
+			            <button onclick="sendGroupID()">Change</button>
+			        </div> 
+			        <div id="errorMessage" class="error-message">GroupID cannot be empty!</div>
+			        <div class="display-title">
+			            <div id="topicValue">"The current topic is: " + topic</div>
+			        </div>
+			    </div>
+			    
+            </div>
+            <div class="textarea-container">
+                <textarea id="mqttMessage" rows="10" cols="50" readonly></textarea>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    	let topic = "group_1";
+        async function showOption(value) {
+            document.getElementById('onOff').style.display = 'none';
+            document.getElementById('startStop').style.display = 'none';
+            document.getElementById('threshold').style.display = 'none';
+            document.getElementById('groupID').style.display = 'none';
+
+            if (value === 'onOff') {
+                document.getElementById('onOff').style.display = 'flex';
+                document.querySelector('.option-title').textContent = 'Force Watering';
+            } else if (value === 'startStop') {
+                document.getElementById('startStop').style.display = 'flex';
+                document.querySelector('.option-title').textContent = 'Start/Stop';
+            } else if (value === 'threshold') {
+                document.getElementById('threshold').style.display = 'flex';
+                document.querySelector('.option-title').textContent = 'Change Threshold';
+                await fetchThreshold();
+            } else if (value === 'groupID') {
+                document.getElementById('groupID').style.display = 'flex';
+                document.querySelector('.option-title').textContent = 'Change GroupID';
+                await fetchTopic();
+            }
+
+            // Update active button
+            const buttons = document.querySelectorAll('.sidebar button');
+            buttons.forEach(button => button.classList.remove('active'));
+            document.querySelector(`.sidebar button[onclick="showOption('${value}')"]`).classList.add('active');
+        }
+
+        async function fetchThreshold() {
+            try {
+                const response = await fetch('/api/config/threshold');
+                const data = await response.json();
+                const threshold = data.threshold;
+                document.getElementById('trackbar').value = threshold;
+                document.getElementById('trackbarValue').innerText = threshold;
+            } catch (error) {
+                console.error('Error fetching threshold:', error);
+            }
+        }
+        
+        async function fetchTopic() {
+            try {
+                const response = await fetch('/api/config/topic');
+                const data = await response.json();
+                const topic = data.topic;
+                document.getElementById('topicValue').innerText = "The current topic is: " + topic;
+            } catch (error) {
+                console.error('Error fetching topic:', error);
+            }
+        }
+        
+        async function fetchTopic2() {
+            try {
+                const response = await fetch('/api/config/topic');
+                const data = await response.json();
+                const topic = data.topic;
+                return topic; // Return the topic value
+            } catch (error) {
+                console.error('Error fetching topic:', error);
+                throw error; // Rethrow the error to handle it outside the function
+            }
+        }
+
+        async function sendData(action) {
+            const url = '/api/config/action';
+            const data = { action: action };
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                const result = await response.json();
+                console.log('Success:', result);
+                if (action == 'start'){
+                	document.getElementById('statusIndicator').style.backgroundColor = 'green';
+                } else if (action =='stop'){
+                	document.getElementById('statusIndicator').style.backgroundColor = 'red';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function sendCustomData() {
+            const textBoxValue = document.getElementById('customTextBox').value;
+            sendData(textBoxValue);
+        }
+
+        function sendThreshold() {
+            const trackbarValue = document.getElementById('trackbar').value;
+            sendData("N" + trackbarValue);
+        }
+        
+        function sendGroupID() {
+            var textBox = document.getElementById('groupTextBox');
+            var errorMessage = document.getElementById('errorMessage');
+            if (textBox.value.trim() === '') {
+                // If the textbox is empty, show the error message with animation
+                errorMessage.classList.add('show');
+            } else {
+                // If the textbox is not empty, hide the error message
+                errorMessage.classList.remove('show');
+
+                // Get the value from the textbox
+                const trackbarValue = textBox.value;
+
+                // Proceed with the existing logic
+                updateTopicValue(trackbarValue);
+                sendData("G" + trackbarValue);
+            }
+        }
+        
+        const ws = new WebSocket('ws://' + window.location.host + '/websocket');
+        ws.onmessage = function(event) {
+        	fetchTopic2()
+            .then(result => {
+                topic = result; // Assign the result (topic value) to the topic variable
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+            const currentTime = new Date().toLocaleTimeString();
+            const textarea = document.getElementById('mqttMessage');
+            textarea.value += '[' + currentTime + '] ' + topic + ": " + event.data + '\n';
+            textarea.scrollTop = textarea.scrollHeight;
+        };
+        
+        
+
+        function updateTrackbarValue(value) {
+            document.getElementById('trackbarValue').innerText = value;
+        }
+        
+        function updateTopicValue(value) {
+            document.getElementById('topicValue').innerText = "The current topic is: " + value;
+        }
+
+        // Set the default option to "Start & Stop"
+        document.addEventListener('DOMContentLoaded', function() {
+            showOption('startStop');
+        });
+    </script>
+</body>
+</html>
